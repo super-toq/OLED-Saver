@@ -4,7 +4,6 @@
  *
  * komplett:
  * gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o oledsaver main.c free.basti.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1)
-
  *
  * 
  *
@@ -12,7 +11,7 @@
  * Please note:
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
  * 
- * Version 0.9.3  free.basti.oledsaver (Fensterbasis von 'finden v0.6.1')
+ * Version 0.9.3_2  free.basti.oledsaver (Fensterbasis von 'finden v0.6.1')
  */
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -363,7 +362,7 @@ static void show_about (GSimpleAction *action, GVariant *parameter, gpointer use
     //adw_about_dialog_set_body(about, "Hierbei handelt es sich um ein klitzekleines Testprojekt."); //nicht in meiner adw Version?
     adw_about_dialog_set_application_name (about, "OLED-Saver");
     adw_about_dialog_set_version (about, "0.9.3");
-    adw_about_dialog_set_developer_name (about, "Build for Basti™");
+    adw_about_dialog_set_developer_name (about, "Built for Basti™");
     adw_about_dialog_set_website (about, "https://github.com/super-toq");
 
     /* Lizenz – BSD2 wird als „custom“ angegeben */
