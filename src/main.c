@@ -11,25 +11,25 @@
  * Please note:
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
  * 
- * Version 0.9.6-flatpak  free.basti.oledsaver
+ * Version 0.9.8-flatpak  free.basti.oledsaver
  */
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <adwaita.h>
 #include "icon-gresource.h" // binäre Icons
-#include <sys/wait.h>       // für waitpid()
-#include <signal.h>         // für signal(),SIGTERM,SIGINT,kill()
+//#include <sys/wait.h>       // für waitpid()
+#include <string.h>         // für strstr()
+//#include <signal.h>         // für signal(),SIGTERM,SIGINT,kill()
 #include <dbus/dbus.h>      // für DBusConnection,DBusMessage,dbus_bus_get(),dbus_message_new_method_call;
 #include <locale.h>         // für setlocale(LC_ALL, "")
 #include <glib/gi18n.h>     // für _();
-#include <unistd.h>         // für fork(),sleep();
+//#include <unistd.h>         // für fork(),sleep();
 
 
 /* globale Referenz, wird beim UI-Aufbau gesetzt */
-int inhibit_fd = -1;                          //Dateiskriptor
-static GtkCheckButton *fullscr_check = NULL;  // abändern ...
-static gboolean dialog_finished = FALSE;
-static pid_t inhibit_pid = 0;                 // PID des systemd-inhibit Prozesses
+//int inhibit_fd = -1;                          //Dateiskriptor
+//static GtkCheckButton *fullscr_check = NULL;  // abändern,löschen !! ...
+//static uint32_t inhibit_cookie = 0;           // cookie in start_dbus_inhibit_gnome_screensaver
 
 
 /* ----- Umgebung identifizieren -------------------------------------- */
@@ -40,121 +40,130 @@ typedef enum {
     DESKTOP_XFCE,
     DESKTOP_MATE
 } DesktopEnvironment;
-static DesktopEnvironment detect_desktop_environment(void) {
+
+static DesktopEnvironment detect_desktop(void) {
     const char *desktop = g_getenv("XDG_CURRENT_DESKTOP");
-    g_print(_("Prüfe %s-Desktop...\n"), desktop);
-    if (!desktop) {
-        desktop = g_getenv("DESKTOP_SESSION");
-    }
-
-    if (!desktop) {
-        return DESKTOP_UNKNOWN;
-    }
-    g_autofree gchar *desktop_upper = g_ascii_strup(desktop, -1);
-
-    if (strstr(desktop_upper, "GNOME")) {
-        return DESKTOP_GNOME;
-    } else if (strstr(desktop_upper, "KDE")) {
-        return DESKTOP_KDE;
-    } else if (strstr(desktop_upper, "XFCE")) {
-        return DESKTOP_XFCE;
-    } else if (strstr(desktop_upper, "MATE")) {
-        return DESKTOP_MATE;
-    }
-
+    if (!desktop) desktop = g_getenv("DESKTOP_SESSION");
+    if (!desktop) return DESKTOP_UNKNOWN;
+    g_autofree gchar *upper = g_ascii_strup(desktop, -1);
+    if (strstr(upper, "GNOME")) return DESKTOP_GNOME;
+    if (strstr(upper, "KDE"))   return DESKTOP_KDE;
+    if (strstr(upper, "XFCE"))  return DESKTOP_XFCE;
+    if (strstr(upper, "MATE"))  return DESKTOP_MATE;
     return DESKTOP_UNKNOWN;
 }
 
-static void prevent_standby_universal(void) {
-    DesktopEnvironment desktop = detect_desktop_environment();
-g_print("Wähle entsprechende Funktion aus.\n"); // testen
-    switch (desktop) {
-        case DESKTOP_GNOME:
-            // GNOME-spezifische Methode
-            g_print(_("[1Cg] Energiespar-Verhalten von Gnome vorbereiten...\n"));
-            system("gsettings set org.gnome.desktop.session idle-delay 0");
-            system("gsettings set org.gnome.desktop.screensaver lock-enabled false");
-            break;
+/* --- Globale Variablen für Inhibit --- */
+static uint32_t gnome_cookie = 0;  // GNOME-Inhibit
+static int system_fd = -1;         // systemd/KDE-Inhibit
 
-        case DESKTOP_KDE:
-            // KDE-spezifische Methode
-            g_print(_("[1Ck] Energiespar-Verhalten von KDE vorbereiten...\n"));
-            system("qdbus org.kde.PowerManagement /org/kde/PowerManagement/PolicyAgent org.kde.PowerManagement.PolicyAgent.SuppressScreenSaver");
-            break;
-
-        case DESKTOP_XFCE:
-            // XFCE-spezifische Methode
-            g_print(_("[1Cx] Energiespar-Verhalten von XFCE4 vorbereiten...\n"));
-            system("xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/blank-on-ac -s 0");
-            break;
-
-        case DESKTOP_MATE:
-            // MATE-spezifische Methode
-            g_print(_("[1Cm] Energiespar-Verhalten von MATE vorbereiten...\n"));
-            system("gsettings set org.mate.power-manager sleep-display-ac 0");
-            break;
-
-        default:
-            // Fallback: Systemd-Inhibit
-            g_print(_("[1Cf] Fallback, keine Anpassung des Energiespar-Verhaltens.\n"));
-            // Fallback in Flatpak-Version deaktiviert.   
-            //system("systemd-inhibit --mode=block --what=idle:sleep:shutdown:handle-lid-switch sleep infinity");
-            break;
-    }
-}
-
-static void restore_standby_settings_universal(void) {
-    DesktopEnvironment desktop = detect_desktop_environment();
-g_print(_("[1CReset] Zustand wird wiederhergestellt.\n"));
-    switch (desktop) {
-        case DESKTOP_GNOME:
-             system("gsettings reset org.gnome.desktop.session idle-delay");
-             system("gsettings reset org.gnome.desktop.screensaver lock-enabled");
-            //system("gsettings set org.gnome.desktop.session idle-delay 300");
-            //system("gsettings set org.gnome.desktop.screensaver lock-enabled true");
-            break;
-
-        case DESKTOP_KDE:
-            // KDE hat keine direkte Wiederherstellungsmethode
-            break;
-
-        case DESKTOP_XFCE:
-            system("xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/blank-on-ac -s 10");
-            break;
-
-        case DESKTOP_MATE:
-            system("gsettings reset org.mate.power-manager sleep-display-ac");
-            //system("gsettings set org.mate.power-manager sleep-display-ac 10");
-            break;
-
-        default:
-            break;
-    }
-}
-
-
-/* ---------------- Teil 2 ------------------ */
-
-// Methode 1 in Flatpak-Version entfernt!
-
-
-/* -- [Methode 2] -- STARTEN systemd-inhibit über dbus ----- */
-static void start_inhibit_dbus_standby_prevention(void) {
+/* --- GNOME ScreenSaver Inhibit --- */
+static void start_gnome_inhibit(void) {
+    DBusError err;
     DBusConnection *conn;
     DBusMessage *msg, *reply;
-    DBusError err;
     DBusMessageIter args;
-    int fd;
+
+    dbus_error_init(&err);
+    /* Session-Bus */
+    conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
+    if (!conn || dbus_error_is_set(&err)) {
+    g_warning("[GNOME] DBus error: %s\n", err.message); dbus_error_free(&err);
+    return; 
+    }
+
+    /* DBus-Auffruf vorbereiten */
+    msg = dbus_message_new_method_call(
+        "org.freedesktop.ScreenSaver",
+        "/ScreenSaver",
+        "org.freedesktop.ScreenSaver",
+        "Inhibit"
+    );
+    
+    if (!msg) {
+    g_warning("[GNOME] Error creating the DBus message (1)\n");
+    return; }
+
+    const char *app = "OLED-Saver";
+    const char *reason = "Prevent Standby";
+    dbus_message_iter_init_append(msg, &args);
+    dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &app);
+    dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &reason);
+
+    /* Nachricht senden */
+    reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, &err);
+
+    if (!reply || dbus_error_is_set(&err)) { 
+       g_warning("[GNOME] Inhibit failed: %s\n", err.message);
+       dbus_error_free(&err); 
+       dbus_message_unref(msg); 
+    return; 
+    }
+
+    /* Antwort auslesen (COOKIE als uint32) */
+    DBusMessageIter iter;
+    if (!dbus_message_iter_init(reply, &iter) || 
+       dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_UINT32) {
+       g_warning("[GNOME] Inhibit reply invalid (no cookie)\n"); 
+       dbus_message_unref(msg); dbus_message_unref(reply); return;
+    }
+    dbus_message_iter_get_basic(&iter, &gnome_cookie);
+    g_print("[GNOME] Inhibit active, cookie=%u\n", gnome_cookie);
+    dbus_message_unref(msg);
+    dbus_message_unref(reply);
+}
+
+static void stop_gnome_inhibit(void) {
+    if (!gnome_cookie) return;
+
+    DBusError err;
+    DBusConnection *conn;
+    DBusMessage *msg;
+    DBusMessageIter args;
+
+    dbus_error_init(&err);
+
+    conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
+    if (!conn || dbus_error_is_set(&err)) {
+       g_warning("[GNOME] DBus error (session): %s\n", err.message);
+       dbus_error_free(&err); return; }
+
+    msg = dbus_message_new_method_call(
+        "org.freedesktop.ScreenSaver",
+        "/ScreenSaver",
+        "org.freedesktop.ScreenSaver",
+        "UnInhibit"
+    );
+
+    if (!msg) {
+        g_warning("[GNOME] Error creating the DBus message (2)\n");
+        return;
+    }
+
+    dbus_message_iter_init_append(msg, &args);
+    dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &gnome_cookie);
+
+    dbus_connection_send(conn, msg, NULL);
+    dbus_message_unref(msg);
+    g_print("[GNOME] Inhibit closed (cookie=%u)\n", gnome_cookie);
+    gnome_cookie = 0;
+}
+
+/* --- systemd/KDE login1.Manager Inhibit --- */
+static void start_system_inhibit(void) {
+    DBusError err;
+    DBusConnection *conn;
+    DBusMessage *msg, *reply;
+    DBusMessageIter args;
 
     /* Fehlerbehandlung initialisieren */
     dbus_error_init(&err);
 
     /* Verbindung zum Systembus herstellen */
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
-    if (dbus_error_is_set(&err)) {
-        g_warning(_("[2D] DBus Verbindungsfehler: %s .\n"), err.message);
-        dbus_error_free(&err);
-        return;
+    if (!conn || dbus_error_is_set(&err)) {
+       g_warning("System DBus error: %s\n", err.message);
+       dbus_error_free(&err); return; 
     }
 
     /* Methodenaufruf vorbereiten */
@@ -162,99 +171,71 @@ static void start_inhibit_dbus_standby_prevention(void) {
         "org.freedesktop.login1",
         "/org/freedesktop/login1",
         "org.freedesktop.login1.Manager",
-        "Inhibit"
-    );
+        "Inhibit");
 
-    if (msg == NULL) {
-        g_warning(_("[2D] DBus Nachrichtenerstellung fehlgeschlagen.\n"));
-        return;
+    if (!msg) {
+       g_warning("[SYSTEM] Error creating the DBus message\n");
+       return;
     }
 
     /* Argumente für Inhibit vorbereiten */
-    g_print(_("[2Di] DBus Aufruf vorbereiten...\n"));
-    dbus_message_iter_init_append(msg, &args);
     const char *what = "sleep:idle:shutdown:handle-lid-switch:handle-suspend-key";
-    const char *who = "OLED-Saver";
-    const char *why = "Prevent Standby and Screen Lock";
+    const char *who  = "OLED-Saver";
+    const char *why  = "Prevent Standby";
     const char *mode = "block";
 
+    dbus_message_iter_init_append(msg, &args);
     dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &what);
     dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &who);
     dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &why);
     dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &mode);
 
-    /* Methode senden und Antwort empfangen */
+     /* Methode senden und Antwort empfangen */
     reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, &err);
-    g_print(_("[2Di] DBus Aufruf senden...\n"));
-    if (dbus_error_is_set(&err)) {
-        g_warning(_("[2Di] DBus Methodenaufruf-Fehler: %s .\n"), err.message);
-        dbus_message_unref(msg);
-        dbus_error_free(&err);
-        return;
+    if (!reply || dbus_error_is_set(&err)) {
+       g_warning("[SYSTEM] Inhibit failed: %s\n", err.message);
+       dbus_error_free(&err); dbus_message_unref(msg);
+       return; 
     }
 
-    /* Dateideskriptor aus der Antwort extrahieren */
-    if (!dbus_message_iter_init(reply, &args) ||
-        dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_UNIX_FD) {
-        g_warning(_("[2Di] Ungültige DBus-Antwort.\n"));
+    DBusMessageIter iter;
+    if (!dbus_message_iter_init(reply, &iter) ||
+        dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_UNIX_FD) {
+        g_warning("[SYSTEM] Inhibit reply invalid\n");
         dbus_message_unref(msg);
         dbus_message_unref(reply);
         return;
     }
 
-    dbus_message_iter_get_basic(&args, &fd);
-    
-    /* Speichere den Dateideskriptor für später */
-    inhibit_fd = fd;
-
+    dbus_message_iter_get_basic(&iter, &system_fd);
+    g_print("[SYSTEM] Inhibit active, fd=%d\n", system_fd);
     /* Aufräumen */
     dbus_message_unref(msg);
     dbus_message_unref(reply);
-
-    g_print(_("[2D_] Standby-Verhinderung aktiviert.\n"));
 }
 
-/* -- [Methode 2] -- BEENDEN von Inhibit aus "systemd-inhibit und dbus" --- */
-static void stop_inhibit_dbus_standby_prevention(void) {
-    if (inhibit_fd > 0) {
-        close(inhibit_fd);
-        inhibit_fd = -1;
-        g_print(_("[2D_] Standby-Verhinderung beendet.\n"));
-    }
+/* ----- Beenden von Inhibit... ----- */
+static void stop_system_inhibit(void) {
+    if (system_fd < 0) return;
+    close(system_fd);
+    system_fd = -1;
+    g_print("[System] Preventing standby has been stopped\n");
 }
 
-
-/* ------ Wrapperfunktionen zu allen Funktionen oberhalb ! ------------- */
-static void cleanup_and_restore_universal(int signum);
-static void start_standby_prevention(void);
-static void stop_standby_prevention(void);
-
-// Signal-Handler-Implementierung
-static void cleanup_and_restore_universal(int signum) {
-    stop_standby_prevention();
-    exit(0);
-}
-
-static void setup_signal_handlers_universal(void) {
-    signal(SIGINT, cleanup_and_restore_universal);
-    signal(SIGTERM, cleanup_and_restore_universal);
-}
-
+/* --- START --- ausgelöst in on_activate ------------------------------------- */
 static void start_standby_prevention(void) {
-    // Bestehende Logik zur Standby-Verhinderung
-    prevent_standby_universal();
-    start_inhibit_dbus_standby_prevention();
-//    start_inhibit_only_standby_prevention();
+    DesktopEnvironment de = detect_desktop();
+    if (de == DESKTOP_GNOME) start_gnome_inhibit();
+    start_system_inhibit(); // KDE, XFCE, MATE
 }
 
+/* --- STOP --- ausgelöst beim shutdown -------------------------------------- */
 static void stop_standby_prevention(void) {
-    // Bestehende Logik zur Wiederherstellung
-    restore_standby_settings_universal();
-    stop_inhibit_dbus_standby_prevention();
-//    stop_inhibit_only_standby_prevention();
+    stop_gnome_inhibit();
+    stop_system_inhibit();
 }
 
-/* ---------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------- */
 
 
 /* ----- Mausbewegung beendet Fullscreen Fenster, 
@@ -271,7 +252,7 @@ on_mouse_move_exit_fullscreen(GtkEventControllerMotion *controller,
     g_signal_handlers_disconnect_by_func(controller,
                                          on_mouse_move_exit_fullscreen,
                                          user_data);
-    return GDK_EVENT_STOP;
+    return TRUE;  // entfernen !! -> return GDK_EVENT_STOP;
 }
 
 
@@ -323,7 +304,7 @@ static void show_about (GSimpleAction *action, GVariant *parameter, gpointer use
     AdwAboutDialog *about = ADW_ABOUT_DIALOG (adw_about_dialog_new ());
     //adw_about_dialog_set_body(about, "Hierbei handelt es sich um ein klitzekleines Testprojekt."); //nicht in meiner adw Version?
     adw_about_dialog_set_application_name (about, "OLED-Saver");
-    adw_about_dialog_set_version (about, "0.9.6-flatpak");
+    adw_about_dialog_set_version (about, "0.9.8-flatpak");
     adw_about_dialog_set_developer_name (about, "Built for Basti™");
     adw_about_dialog_set_website (about, "https://github.com/super-toq");
 
@@ -365,6 +346,7 @@ static void show_about (GSimpleAction *action, GVariant *parameter, gpointer use
     GtkWindow *parent = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(
     gtk_application_get_active_window(GTK_APPLICATION(app)) )));
     adw_dialog_present(ADW_DIALOG(about), GTK_WIDGET(parent));
+
 }
 
 /* ----- Callback Beenden-Button ----- */
@@ -377,13 +359,13 @@ gtk_window_destroy(win);
 }
 
 /* ----- Motion-Handler, Wartezeit, für Fullscreen-Button ----- */
-static gboolean
-enable_mouse_exit_after_delay(gpointer user_data)
+static gboolean enable_mouse_exit_after_delay(gpointer user_data)
 {
     GtkEventController *motion = GTK_EVENT_CONTROLLER(user_data);
     
     /* Motion-Handler aktivieren */
     gtk_event_controller_set_propagation_phase(motion, GTK_PHASE_TARGET);
+
     
     return G_SOURCE_REMOVE;  // Timer nur einmal ausführen
 }
@@ -423,11 +405,9 @@ on_fullscreen_button_clicked(GtkButton *button, gpointer user_data)
     /* 2.1 Motion-Handler zuvor deaktivieren */
     gtk_event_controller_set_propagation_phase(motion, GTK_PHASE_NONE);
 
+
     /* 2.2 Verzögerung in Sekunden, zur Aktivierung des Motion-Handlers */
     g_timeout_add_seconds(1, enable_mouse_exit_after_delay, motion);
-
-    /* 3. Funktion zum umgehen der Standbyzeit starten */
-    start_standby_prevention();
 
 }
 
@@ -524,14 +504,10 @@ static void on_activate (AdwApplication *app, gpointer)
     gtk_widget_set_visible(GTK_WIDGET(set1_check), FALSE);
 
     /* Horizontales Box‑Widget nur einmal erzeugen */
-    if (!chbx_box) {
-        chbx_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-        gtk_widget_set_hexpand (chbx_box, TRUE);
-        /* Beide Widgets einfügen – danach besitzen sie Eltern‑Container */
-        gtk_box_append (GTK_BOX (chbx_box), GTK_WIDGET (set1_check));
-
-
-    }
+    chbx_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+    gtk_widget_set_hexpand (chbx_box, TRUE);
+    /* Beide Widgets einfügen – danach besitzen sie Eltern‑Container */
+    gtk_box_append (GTK_BOX (chbx_box), GTK_WIDGET (set1_check));
     
     /* button_box erstellen, wo Schaltflächen hineinkommen */
     GtkWidget *button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
@@ -579,7 +555,9 @@ static void on_activate (AdwApplication *app, gpointer)
 
     /* ----- Fenster desktop‑konform anzeigen ----- */
     gtk_window_present(GTK_WINDOW(adw_win));
-    
+
+    /* +++++ Funktion zum umgehen der Standbyzeit starten +++++ */
+    start_standby_prevention();
 
 }
 
