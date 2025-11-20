@@ -248,7 +248,7 @@ on_mouse_move_exit_fullscreen(GtkEventControllerMotion *controller,
     GtkWindow *window = GTK_WINDOW(user_data);
 
     g_idle_add((GSourceFunc)gtk_window_destroy, window);
-        g_print (_("Motionkontroller hat Fullscreen unterbrochen.\n"));
+        g_print("Motion controller exits fullscreen\n");
     g_signal_handlers_disconnect_by_func(controller,
                                          on_mouse_move_exit_fullscreen,
                                          user_data);
@@ -262,9 +262,9 @@ static void on_alert_dialog_response (AdwAlertDialog *dialog,
                           gpointer        user_data)
 {
     if (g_strcmp0 (response, "ok") == 0)
-        g_print ("Dialog btn - ok\n");
+        g_print("Dialog btn - ok\n");
     else
-        g_print ("Dialog btn - cancel\n");
+        g_print("Dialog btn - cancel\n");
 
     /* Hinweis, hier kein g_object_unref(dialog) ! */
 }
@@ -276,7 +276,7 @@ show_alert_dialog (GtkWindow   *parent,
                    const char  *body)
 {
     if (!parent || !GTK_IS_WINDOW (parent)) {
-        g_warning (_("Kein gültiges Elternfenster für Alert-Dialog \n"));
+        g_warning ("No valid parent window for alert dialog \n");
         return;
     }
 
@@ -353,7 +353,7 @@ static void show_about (GSimpleAction *action, GVariant *parameter, gpointer use
 static void on_quitbutton_clicked (GtkButton *button, gpointer user_data)
 {
     //g_application_quit (G_APPLICATION (user_data));
-g_print(_("Anweisung zum Beenden erhalten...\n"));
+g_print("Received instruction to terminate...\n");
 GtkWindow *win = GTK_WINDOW(user_data); 
 gtk_window_destroy(win);
 }
@@ -585,7 +585,7 @@ int main (int argc, char **argv)
         locale_path = "/usr/share/locale"; // Native Hostumgebung /usr/share/locale
     }
     bindtextdomain("oledsaver", locale_path);
-//    g_print (_("Lokalisierung in: %s \n"), locale_path); // testen
+//    g_print("Localization files in: %s \n", locale_path); // testen
 
 
     g_autoptr (AdwApplication) app =      // Instanz erstellen + App-ID + Default-Flags;
