@@ -4,7 +4,7 @@ You can display a black fullscreen to protect the OLED from burn-in.
 
 ![oledsaver](oledsaver_preview_img1.png?raw=true) 
 
-This app was created at the request of good buddy.
+This app was created at the request of a good buddy.
   
   
 ### Installation:  
