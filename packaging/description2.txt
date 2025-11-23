@@ -1,0 +1,3 @@
+Basti’s OLED-Saver is a small, lightweight Libadwaita tool that keeps your computer and display awake whenever you need it for extended periods. It offers a simple black fullscreen mode, perfect for devices with OLED panels to avoid unnecessary burn-in.  
+Basti’s OLED-Saver automatically detects your desktop environment and uses the appropriate inhibit mechanisms for GNOME and KDE so standby doesn’t interfere.  
+The goal was to create a clean, straightforward solution — both as a learning project for modern GTK/Adwaita development and to fulfill a user’s request for a practical everyday utility.

@@ -11,7 +11,7 @@
  * Please note:
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
  * 
- * Version 1.0  free.basti.oledsaver
+ * Version 1.0.1  free.basti.oledsaver
  */
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -240,7 +240,7 @@ on_mouse_move_exit_fullscreen(GtkEventControllerMotion *controller,
     GtkWindow *window = GTK_WINDOW(user_data);
 
     g_idle_add((GSourceFunc)gtk_window_destroy, window);
-        g_print("Motion controller exits fullscreen\n");
+        g_print("Mouse motion exits fullscreen\n");
     g_signal_handlers_disconnect_by_func(controller,
                                          on_mouse_move_exit_fullscreen,
                                          user_data);
@@ -295,7 +295,7 @@ static void show_about (GSimpleAction *action, GVariant *parameter, gpointer use
     /* About‑Dialog anlegen */
     AdwAboutDialog *about = ADW_ABOUT_DIALOG (adw_about_dialog_new ());
     adw_about_dialog_set_application_name (about, "OLED-Saver");
-    adw_about_dialog_set_version (about, "1.0");
+    adw_about_dialog_set_version (about, "1.0.1");
     adw_about_dialog_set_developer_name (about, "Built for Basti™");
     adw_about_dialog_set_website (about, "https://github.com/super-toq");
 

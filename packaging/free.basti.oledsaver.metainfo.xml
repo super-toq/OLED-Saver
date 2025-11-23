@@ -8,15 +8,13 @@
   <summary>Screen saver for OLED displays</summary>
   
   <description>
-    <p>Basti’s OLED-Saver is a small, lightweight Libadwaita tool that keeps your computer and display awake whenever you need it for extended periods. It offers a simple fullscreen blackscreen mode, perfect for devices with OLED panels to avoid unnecessary burn-in.  
-Basti’s OLED-Saver automatically detects your desktop environment and uses the appropriate inhibit mechanisms for GNOME and KDE so standby doesn’t interfere.  
-The goal was to create a clean, straightforward solution — both as a learning project for modern GTK/Adwaita development and to fulfill a user’s request for a practical everyday utility.</p>
+    <p>Basti's OLED-Saver is a small tool that tries to prevent the device from standby, automatic suspending, sreen blanking and screen locking. You can display a black fullscreen to protect the OLED from burn-in.</p>
   </description>
   
   <screenshots>
     <screenshot type="default" style="dark">
       <caption>App dark screenshot</caption>
-      <image>https://raw.githubusercontent.com/super-toq/OLED-Saver/packaging/refs/heads/main/oledsaver_preview_img1.png</image>
+      <image>https://raw.githubusercontent.com/super-toq/OLED-Saver/refs/heads/main/packaging/oledsaver_preview_img1.png</image>
     </screenshot>
   </screenshots> 
   
