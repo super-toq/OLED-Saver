@@ -33,7 +33,7 @@
   </provides>
   
   <releases>
-    <release version="1.0" date="2025-11-21"/>
+    <release version="1.0.2" date="2025-11-26"/>
      <description translate="en">
         <ul>
           <li>This release marks the first stable version of Basti's OLED-Saver, which is now fully compatible with Flatpak.  </li>
