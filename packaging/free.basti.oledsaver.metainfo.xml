@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- https://www.freedesktop.org/software/appstream/docs/chap-CatalogData.html#sect-AppStream-XML -->
+<!-- https://www.freedesktop.org/software/appstream/docs/chap-CatalogData.html -->
 
 <component type="desktop-application">
 
@@ -11,7 +12,7 @@
   <project_license>BSD-2-Clause</project_license>
   <summary>Standby Prevention Tool and Screen Saver for OLED Displays</summary>
   <url type="homepage">https://github.com/super-toq/OLED-Saver</url>
-  <icon type="remote" width="256" height="256">https://github.com/super-toq/OLED-Saver/blob/main/packaging/free.basti.oledsaver.svg</icon>
+  <icon type="remote" width="256" height="256">https://raw.githubusercontent.com/super-toq/OLED-Saver/refs/heads/main/packaging/256x.png</icon>
   <!-- Beschreibung -->
   <description>
     <p>Basti's OLED-Saver is a small tool that tries to prevent the device from standby, automatic suspending, screen blanking and screen locking. You can display a black fullscreen to protect the OLED from burn-in.
