@@ -11,7 +11,7 @@
  * Please note:
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
  * 
- * Version 1.0.4  free.basti.oledsaver
+ * Version 1.0.5  free.basti.oledsaver
  */
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -85,24 +85,27 @@ static void start_gnome_inhibit(void) {
     /* Nachricht senden */
     reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, &err);
 
-    if (!reply || dbus_error_is_set(&err)) { 
-       g_warning("[GNOME] Inhibit failed: %s\n", err.message);
-       dbus_error_free(&err); 
-       dbus_message_unref(msg); 
-    return; 
-    }
-
     /* Antwort auslesen (COOKIE als uint32) */
     DBusMessageIter iter;
-    if (!dbus_message_iter_init(reply, &iter) || 
-       dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_UINT32) {
-       g_warning("[GNOME] Inhibit reply invalid (no cookie)\n"); 
-       dbus_message_unref(msg); dbus_message_unref(reply); return;
+    if (!reply) {
+        g_warning("[GNOME] Inhibit failed: no reply received\n");
+        dbus_message_unref(msg);
+        return;
     }
-    dbus_message_iter_get_basic(&iter, &gnome_cookie);
-    g_print("[GNOME] Inhibit active (cookie=%u)\n", gnome_cookie);
-    dbus_message_unref(msg);
-    dbus_message_unref(reply);
+
+    if (!dbus_message_iter_init(reply, &iter) ||
+        dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_UINT32) {
+        g_warning("[GNOME] Inhibit reply invalid (no cookie)\n");
+        dbus_message_unref(msg);
+        dbus_message_unref(reply);
+        return;
+}
+
+dbus_message_iter_get_basic(&iter, &gnome_cookie);
+g_print("[GNOME] Inhibit active (cookie=%u)\n", gnome_cookie);
+
+dbus_message_unref(msg);
+dbus_message_unref(reply);
 }
 
 /* ----- Stopt Gnome Inhibit ---------------------------------------- */
@@ -249,10 +252,11 @@ on_mouse_move_exit_fullscreen(GtkEventControllerMotion *controller,
                                          user_data);
 
     /* Zerstörung, aus dem aktuellen Event-Stack heraus */
+    g_object_ref(window);
     g_idle_add((GSourceFunc)gtk_window_destroy, window);
+    g_object_unref(window);
 
     g_print("Mouse motion exits fullscreen\n");
-
     return TRUE;
 }
 
@@ -305,7 +309,7 @@ static void show_about (GSimpleAction *action, GVariant *parameter, gpointer use
     /* About‑Dialog anlegen */
     AdwAboutDialog *about = ADW_ABOUT_DIALOG (adw_about_dialog_new ());
     adw_about_dialog_set_application_name (about, "OLED Saver");
-    adw_about_dialog_set_version (about, "1.0.4");
+    adw_about_dialog_set_version (about, "1.0.5");
     adw_about_dialog_set_developer_name (about, "Built for Basti™");
     adw_about_dialog_set_website (about, "https://github.com/super-toq/OLED-Saver");
     //adw_about_dialog_set_comments(about, " ... ");
@@ -422,9 +426,9 @@ static void on_quitbutton_clicked (GtkButton *button, gpointer user_data)
 /* ------------------------------------------------------------------ */
 /*       Aktivierungshandler                                          */
 /* ------------------------------------------------------------------ */
-static void on_activate(AdwApplication *app, gpointer) {
+static void on_activate(AdwApplication *app, gpointer) 
+{
     /* ----- CSS-Provider für zusätzliche Anpassungen --------------- */
-
     // orange=#db9c4a , lightred=#ff8484 , grey=#c0bfbc
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_string(provider,
@@ -450,7 +454,6 @@ static void on_activate(AdwApplication *app, gpointer) {
     gtk_window_set_title (GTK_WINDOW(adw_win), "OLED Saver");     // WM-Titel
     gtk_window_set_default_size (GTK_WINDOW(adw_win), 380, 400);  // Standard-Fenstergröße
     gtk_window_set_resizable (GTK_WINDOW (adw_win), FALSE);       // Skalierung nicht erlauben
-    gtk_window_present (GTK_WINDOW(adw_win));                     // Fenster anzeigen lassen
 
     /* ----- ToolbarView (Root-Widget)  ----------------------------- */
     AdwToolbarView *toolbar_view = ADW_TOOLBAR_VIEW (adw_toolbar_view_new ());
@@ -532,7 +535,7 @@ static void on_activate(AdwApplication *app, gpointer) {
     gtk_widget_set_visible(GTK_WIDGET(set1_check), FALSE); // Checkbox ist nicht sichtbar !!
 
     /* ----- Checkbox-BOX-Widget ------------------------------------ */
-    GtkWidget *chbx_box = chbx_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+    GtkWidget *chbx_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
     gtk_widget_set_hexpand (chbx_box, TRUE);
     gtk_box_append (GTK_BOX (chbx_box), GTK_WIDGET (set1_check));
 
