@@ -30,7 +30,10 @@ modules:
       - glib-compile-resources src/resources.xml --sourcedir=data/icons/ --generate-source --target=src/free.basti.oledsaver.gresource.c 
 
       # ----- Kompilieren der Anwendung -----
-      - gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o _build/bin/bastis-oledsaver src/main.c src/free.basti.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1)
+      - gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o _build/bin/bastis-oledsaver src/main.c src/free.basti.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1) -Wno-deprecated-declarations
+
+      # ----- Warunungen unterdrücken -----
+      
 
       # ----- Erstellen der .po‑Datei -----
       - msgfmt src/po/en_US.po --output-file=_build/share/locale/en_US/LC_MESSAGES/bastis-oledsaver.mo

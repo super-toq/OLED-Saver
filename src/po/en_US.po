@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: 4\n"
-"Report-Msgid-Bugs-To: toq@mailbox.org\n"
-"POT-Creation-Date: 2025-11-29 12:15+0100\n"
+"Project-Id-Version: 4.1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-12-11 13:44+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: toq <toq@mailbox.org>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,33 +25,37 @@ msgstr "Cancel"
 msgid "OK"
 msgstr "OK"
 
-#: main.c:390
+#: main.c:419
 msgid "Vollbild"
 msgstr "Fullscreen"
 
-#: main.c:473
+#: main.c:514
 msgid " Über OLED Saver "
 msgstr " About OLED Saver "
 
-#: main.c:496
+#: main.c:537
 msgid "Blackscreen statt Burn-in! \n"
 msgstr "Blackscreen instead of burn-in!\n"
 
-#: main.c:512
+#: main.c:553
 msgid ""
 " \n"
 "Standby wird jetzt blockiert!\n"
 msgstr ""
 " \n"
 "Standby is prevented!\n"
-#: main.c:530
-msgid "Platzhalter1"
-msgstr "placeholder1"
 
-#: main.c:544
+#: main.c:571
+msgid "Alle 2min auffrischen"
+msgstr "Refresh every 2 minutes"
+
+#: main.c:586
 msgid "Blackscreen"
 msgstr "Blackscreen"
 
-#: main.c:557
+#: main.c:598
 msgid "  Beenden  "
 msgstr "   Quit   "
+
+#~ msgid "Platzhalter1"
+#~ msgstr "placeholder1"
