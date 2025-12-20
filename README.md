@@ -22,17 +22,17 @@ You can also build the application yourself from the transparent source code; he
 
 #### Preparation and Dev Depentencies:
   
-#### * Ubuntu/Debian  
+#### Ubuntu/Debian  
 ```
 sudo apt update && sudo apt install flatpak flatpak-builder
 ```  
   
-#### * Fedora  
+#### Fedora  
 ```
 sudo dnf install flatpak flatpak-builder 
 ```  
   
-#### * Arch
+#### Arch
 ```
 sudo pacman -S flatpak flatpak-builder 
 ```  
@@ -58,7 +58,7 @@ git clone https://github.com/super-toq/OLED-Saver.git
 cd OLED-Saver 
 ```  
 ```
-flatpak-builder --user --install --force-clean build-dir free.basti.oledsaver.yml 
+flatpak-builder --user --install --force-clean _build-dir free.basti.oledsaver.yml 
 ```  
   
 ### Run the OLED-Saver:  
@@ -66,13 +66,13 @@ flatpak-builder --user --install --force-clean build-dir free.basti.oledsaver.ym
 flatpak run free.basti.oledsaver 
 ```  
   
-### Uninstall the application:  
+### Uninstall OLED-Saver:  
 ```
 flatpak uninstall -y free.basti.oledsaver 
 ```  
   
-**Please note**:  
-***This code is part of my learning project.  
+> [!Note]  
+> ***This code is part of my learning project.  
 Use of the code and execution of the application is at your own risk; 
 I accept no liability!***
   
