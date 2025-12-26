@@ -1,5 +1,5 @@
-/* OLED-Saver is part of my learning project;
- * toq 2025  LICENSE: BSD 2-Clause "Simplified"
+/* free.basti.oledsaver by toq 2025
+ * LICENSE: BSD 2-Clause "Simplified"
  *
  *
  *
@@ -7,11 +7,9 @@
  *
  *
  *
- *
  * Please note:
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
- * 
- * Version 1.0.6.1  free.basti.oledsaver
+ *
  */
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -22,6 +20,10 @@
 #include <locale.h>         // für setlocale(LC_ALL, "")
 #include <glib/gi18n.h>     // für _();
 
+#define APP_VERSION    "1.0.7"//_0
+#define APP_ID         "free.basti.oledsaver"
+#define APP_NAME       "OLED Saver"
+#define APP_DOMAINNAME "bastis-oledsaver"
 
 /* ----- Umgebung identifizieren ------------------------------------ */
 typedef enum {
@@ -51,7 +53,7 @@ static int system_fd = -1;         // systemd/KDE-Inhibit (fd = File Descriptor/
 guint fullscreen_timer_id = 0;
 
 /* ----- GNOME ScreenSaver Inhibit ---------------------------------- */
-static void start_gnome_inhibit(void) {
+static void start_gnome_inhibit(void) { // Noch umbauen mit Rückmeldung bei Erfolg, wie STOP-Vorgang
     DBusError err;
     DBusConnection *conn;
     DBusMessage *msg, *reply;
@@ -110,8 +112,9 @@ static void start_gnome_inhibit(void) {
 }
 
 /* ----- Stopt Gnome Inhibit ---------------------------------------- */
-static void stop_gnome_inhibit(void) {
-    if (!gnome_cookie) return;
+static gboolean stop_gnome_inhibit(GError **error) 
+{
+    if (!gnome_cookie) return TRUE; // True wenn kein Cookie vorhanden
 
     DBusError err;
     DBusConnection *conn;
@@ -123,7 +126,7 @@ static void stop_gnome_inhibit(void) {
     conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
     if (!conn || dbus_error_is_set(&err)) {
        g_warning("[GNOME] DBus error (session): %s\n", err.message);
-       dbus_error_free(&err); return; }
+       dbus_error_free(&err); return FALSE; }
 
     msg = dbus_message_new_method_call(
         "org.freedesktop.ScreenSaver",
@@ -134,7 +137,7 @@ static void stop_gnome_inhibit(void) {
 
     if (!msg) {
         g_warning("[GNOME] Error creating the DBus message (2)\n");
-        return;
+        return FALSE;
     }
 
     dbus_message_iter_init_append(msg, &args);
@@ -144,10 +147,11 @@ static void stop_gnome_inhibit(void) {
     dbus_message_unref(msg);
     g_print("[GNOME] Inhibit closed (cookie=%u)\n", gnome_cookie);
     gnome_cookie = 0;
+    return TRUE; // Erfolgreich beendet - Rückgabe true
 }
 
 /* ----- systemd/KDE login1.Manager Inhibit ------------------------- */
-static void start_system_inhibit(void) {
+static void start_system_inhibit(void) { // Noch umbauen mit Rückmeldung bei Erfolg, wie STOP-Vorgang
     DBusError err;
     DBusConnection *conn;
     DBusMessage *msg, *reply;
@@ -212,27 +216,36 @@ static void start_system_inhibit(void) {
 }
 
 /* ----- Stop System Inhibit ---------------------------------------- */
-static void stop_system_inhibit(void) {
-    if (system_fd < 0) return;
+static gboolean stop_system_inhibit(GError **error) 
+{
+    if (system_fd < 0) return FALSE; // kein fd - Rückgabe false
         close(system_fd);
         system_fd = -1;
         g_print("[System] Preventing standby has been stopped\n");
+    return TRUE; // erfolgreich beendet - Rückgabe true
 }
 
-/* --- START --- ausgelöst in on_activate --------------------------- */
-static void start_standby_prevention(void) {
+/* --- START-Wrapper --- ausgelöst in on_activate ------------------- */
+static void start_standby_prevention(void) {  // Noch umbauen mit Rückmeldung bei Erfolg, wie STOP
     DesktopEnvironment de = detect_desktop();
     if (de == DESKTOP_GNOME) start_gnome_inhibit();
         start_system_inhibit(); // KDE, XFCE, MATE
 }
 
-/* --- STOP --- ausgelöst beim shutdown ----------------------------- */
-static void stop_standby_prevention(void) {
-    stop_gnome_inhibit();
-    stop_system_inhibit();
+/* --- STOP-Wrapper --- ausgelöst beim shutdown --------------------- */
+static gboolean stop_standby_prevention(GError **error) 
+{
+
+    gboolean stop_sp = TRUE; // Erfolg meldet TRUE zurück und als GError übermittelt
+
+    if (!stop_gnome_inhibit (error))
+        stop_sp = FALSE;
+
+    if (!stop_system_inhibit (error))
+        stop_sp = FALSE;
+
+    return stop_sp;
 }
-
-
 /* ------------------------------------------------------------------ */
 
 
@@ -259,7 +272,6 @@ static gboolean exit_fullscreen(GtkEventControllerMotion *controller, gdouble x,
     g_print("Mouse motion exits fullscreen\n");
     return TRUE;
 }
-
 
 /* ----- Message / Alert-Dialog generisch, 
          show_alert_dialog (parent,*Titel, *Inhalttext) ------------- */
@@ -290,13 +302,11 @@ static void show_alert_dialog (GtkWindow   *parent, const char *title, const cha
     adw_alert_dialog_set_default_response (dialog, "ok");
 
     /* Antwort‑Signal verbinden */
-    g_signal_connect(dialog, "response",
-                      G_CALLBACK(on_alert_dialog_response), NULL);
+    g_signal_connect(dialog, "response", G_CALLBACK(on_alert_dialog_response), NULL);
 
     /* Dialog präsentieren */
     adw_dialog_present(ADW_DIALOG(dialog), GTK_WIDGET(parent));
 }
-
 
 /* ----- Callback: About-Dialog öffnen ------------------------------ */
 static void show_about(GSimpleAction *action, GVariant *parameter, gpointer user_data)
@@ -304,8 +314,8 @@ static void show_about(GSimpleAction *action, GVariant *parameter, gpointer user
     AdwApplication *app = ADW_APPLICATION(user_data);
     /* About‑Dialog anlegen */
     AdwAboutDialog *about = ADW_ABOUT_DIALOG(adw_about_dialog_new ());
-    adw_about_dialog_set_application_name(about, "OLED Saver");
-    adw_about_dialog_set_version(about, "1.0.6_1");
+    adw_about_dialog_set_application_name(about, APP_NAME);
+    adw_about_dialog_set_version(about, APP_VERSION);
     adw_about_dialog_set_developer_name(about, "Built for Basti™");
     adw_about_dialog_set_website(about, "https://github.com/super-toq/OLED-Saver");
     //adw_about_dialog_set_comments(about, " ... ");
@@ -342,7 +352,7 @@ static void show_about(GSimpleAction *action, GVariant *parameter, gpointer user
         "https://www.svgrepo.com/page/licensing/#CC%20Attribution \n");
 
 //    adw_about_dialog_set_translator_credits(about, "toq: deutsch\n toq: englisch");
-      adw_about_dialog_set_application_icon(about, "free.basti.oledsaver");   //IconName
+      adw_about_dialog_set_application_icon(about, APP_ID);   //IconName
 
     /* Setze das Anwendungssymbol von GResource: +/
 
@@ -370,7 +380,7 @@ static gboolean enable_motion_handler_after_delay(gpointer user_data)
 }
 
 /* ----- Funktion die im Intervall das Fullscreen-Fenster 
-                      wieder in den Vordergrund ruft ---------------- */
+                      zurück in den Vordergrund ruft ---------------- */
 static gboolean keep_window_on_top(gpointer user_data) 
 {
     GtkWindow *fullscreen_window = GTK_WINDOW(user_data);
@@ -457,7 +467,22 @@ static void on_fullscreen_button_clicked(GtkButton *button, gpointer user_data)
 /* ----- Callback Beenden-Button ------------------------------------ */
 static void on_quitbutton_clicked(GtkButton *button, gpointer user_data)
 {
-    GtkWindow *window = GTK_WINDOW(user_data); 
+    GError *error = NULL;
+    if (stop_standby_prevention(&error)) {
+        /* Rückmeldung aus stop_standby_prevention (stop_sp) */
+        g_print("Applicaton will now shut down\n");
+
+     // Hier Ausbau für Rückmeldung (TRUE) !!
+
+    } else {
+        g_warning ("Failed to stop standby prevention: %s\n", error->message);
+        g_error_free(error); // nur bei FALSE ist Fehler
+
+     // Hier Ausbau für Rückmeldung (FALSE) !!
+
+    }
+    /* zu schließendes Fenster holen */
+    GtkWindow *window = GTK_WINDOW(user_data);
     gtk_window_destroy(window);
 }
 
@@ -492,11 +517,10 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
     g_object_unref(provider);
 
-
     /* ----- Adwaita-Fenster ---------------------------------------- */
     AdwApplicationWindow *adw_win = ADW_APPLICATION_WINDOW(adw_application_window_new(GTK_APPLICATION(app))); 
 
-    gtk_window_set_title(GTK_WINDOW(adw_win), "OLED Saver");     // WM-Titel
+    gtk_window_set_title(GTK_WINDOW(adw_win), APP_NAME);     // WM-Titel
     gtk_window_set_default_size(GTK_WINDOW(adw_win), 380, 400);  // Standard-Fenstergröße
     gtk_window_set_resizable(GTK_WINDOW(adw_win), FALSE);       // Skalierung nicht erlauben
 
@@ -610,7 +634,9 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     //gtk_widget_add_css_class(quit_button, "destructive-action");
     // Schaltfläche Beenden Signal verbinden:
     g_signal_connect(quit_button, "clicked", G_CALLBACK(on_quitbutton_clicked), adw_win);
-    
+    /* ------ Close-request vom originalen "Window-close-button" abfangen ----- */
+    g_signal_connect(adw_win, "close-request", G_CALLBACK(on_quitbutton_clicked), adw_win);
+
     /* ----- Beide Schaltflächen der BOX hinzufügen ---------------- */
     gtk_box_append(GTK_BOX(button_box), quit_button);
     gtk_box_append(GTK_BOX(button_box), setfullscreen_button);
@@ -651,23 +677,23 @@ int main(int argc, char **argv)
     //* ----- Localiziation-Pfad ---------------------------------- */
     setlocale(LC_ALL, "");               // ruft die aktuelle Locale des Prozesses ab
 //    setlocale(LC_ALL, "en_US.UTF-8"); // testen!!
-    textdomain("bastis-oledsaver");      // textdomain festlegen
-    bind_textdomain_codeset("bastis-oledsaver", "UTF-8"); 
+    textdomain             (APP_DOMAINNAME);      // textdomain festlegen
+    bind_textdomain_codeset(APP_DOMAINNAME, "UTF-8"); 
     if (flatpak_id != NULL && flatpak_id[0] != '\0')
     {
         locale_path = "/app/share/locale";
     } else {
         locale_path = "/usr/share/locale";
     }
-    bindtextdomain("bastis-oledsaver", locale_path);
+    bindtextdomain         (APP_DOMAINNAME, locale_path);
     //g_print("Localization files in: %s \n", locale_path); // testen!!
 
 
     g_autoptr(AdwApplication) app =      // Instanz erstellen + App-ID + Default-Flags;
-        adw_application_new("free.basti.oledsaver", G_APPLICATION_DEFAULT_FLAGS);
+                        adw_application_new(APP_ID, G_APPLICATION_DEFAULT_FLAGS);
 
     g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL); // Signal mit on_activate verbinden
-    g_signal_connect(app, "shutdown", G_CALLBACK(stop_standby_prevention), NULL);
+    //g_signal_connect(app, "shutdown", G_CALLBACK(stop_standby_prevention), NULL);
     /* --- g_application_run startet Anwendung u. wartet auf Ereignis --- */
     return g_application_run(G_APPLICATION(app), argc, argv);
 }
