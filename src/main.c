@@ -20,7 +20,7 @@
 #include <locale.h>         // für setlocale(LC_ALL, "")
 #include <glib/gi18n.h>     // für _();
 
-#define APP_VERSION    "1.0.7"//_0
+#define APP_VERSION    "1.0.8"//_0
 #define APP_ID         "free.basti.oledsaver"
 #define APP_NAME       "OLED Saver"
 #define APP_DOMAINNAME "bastis-oledsaver"
