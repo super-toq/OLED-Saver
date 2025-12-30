@@ -24,7 +24,7 @@ modules:
     buildsystem: simple
     build-commands:
       # ----- Erstelle Verzeichnis‑Struktur -----
-      - mkdir -p _build/bin _build/share/locale/en_US/LC_MESSAGES _build/share/applications _build/share/icons/hicolor/scalable/apps _build/share/icons/hicolor/128x128/apps _build/share/icons/hicolor/256x256/apps _build//share/pixmaps
+      - mkdir -p _build/bin _build/share/locale/en_US/LC_MESSAGES _build/share/locale/en_EN/LC_MESSAGES _build/share/applications _build/share/icons/hicolor/scalable/apps _build/share/icons/hicolor/128x128/apps _build/share/icons/hicolor/256x256/apps _build//share/pixmaps
 
       # ----- Resourcesn kompilieren -----
       - glib-compile-resources src/resources.xml --sourcedir=data/icons/ --generate-source --target=src/free.basti.oledsaver.gresource.c 
@@ -37,16 +37,19 @@ modules:
 
       # ----- Erstellen der .po‑Datei -----
       - msgfmt src/po/en_US.po --output-file=_build/share/locale/en_US/LC_MESSAGES/bastis-oledsaver.mo
+      - msgfmt src/po/en_EN.po --output-file=_build/share/locale/en_EN/LC_MESSAGES/bastis-oledsaver.mo
 
       # ----- Installation
       - install -D -m 0755 _build/bin/bastis-oledsaver /app/bin/bastis-oledsaver
       - install -D -m 0644 packaging/free.basti.oledsaver.desktop /app/share/applications/free.basti.oledsaver.desktop
       - install -D -m 0644 packaging/free.basti.oledsaver.metainfo.xml /app/share/metainfo/free.basti.oledsaver.metainfo.xml
-      - install -D -m 0644 packaging/free.basti.oledsaver.svg /app/share/icons/hicolor/scalable/apps/free.basti.oledsaver.png
-      - install -D -m 0644 packaging/128x.png /app/share/icons/hicolor/128x128/apps/free.basti.oledsaver.png
-      - install -D -m 0644 packaging/256x.png /app/share/icons/hicolor/256x256/apps/free.basti.oledsaver.png
+      - install -D -m 0644 packaging/free.basti.oledsaver.svg /app/share/icons/hicolor/scalable/apps/free.basti.oledsaver.svg
+      - install -D -m 0644 packaging/128px.png /app/share/icons/hicolor/128x128/apps/free.basti.oledsaver.png
+      - install -D -m 0644 packaging/256px.png /app/share/icons/hicolor/256x256/apps/free.basti.oledsaver.png
       - install -D -m 0644 packaging/oledsaver_preview_img2.png /app/share/pixmaps/oledsaver_preview_img2.png
+      - install -D -m 0644 packaging/free.basti.oledsaver.svg /app/share/pixmaps/free.basti.oledsaver.svg
       - install -D -m 0644 _build/share/locale/en_US/LC_MESSAGES/bastis-oledsaver.mo /app/share/locale/en_US/LC_MESSAGES/bastis-oledsaver.mo
+      - install -D -m 0644 _build/share/locale/en_EN/LC_MESSAGES/bastis-oledsaver.mo /app/share/locale/en_EN/LC_MESSAGES/bastis-oledsaver.mo
 
     sources:
       - type: dir
