@@ -20,7 +20,7 @@ You can also build the application yourself from the transparent source code; he
   
 ### Building and Installing with Flatpak Builder.  
 
-#### Preparation and Dev Depentencies:
+### Preparation and Dev Depentencies:
   
 #### Ubuntu/Debian  
 ```
@@ -37,17 +37,17 @@ sudo dnf install flatpak flatpak-builder
 sudo pacman -S flatpak flatpak-builder 
 ```  
 
-##### Add Flathub repository: 
+### Add Flathub repository: 
 ```
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo 
 ```  
   
-#### Within Flatpak, the `Gnome SDK 49` is required to build the application: 
+### Within Flatpak, the `Gnome SDK 49` is required: 
 ```
 flatpak install org.gnome.Sdk/x86_64/49
 ```  
   
-### Build and install OLED-Saver:
+### Install OLED-Saver:
   
 #### Clone repository:  
 ```
@@ -66,14 +66,14 @@ flatpak-builder --user --install --force-clean _build-dir free.basti.oledsaver.y
 flatpak run free.basti.oledsaver 
 ```  
   
-### Uninstall OLED-Saver:  
+### If you want to uninstall OLED-Saver:  
 ```
 flatpak uninstall -y free.basti.oledsaver 
 ```  
   
 > [!Note]  
-> ***This code is part of my learning project.  
+> This code is part of my learning project.  
 Use of the code and execution of the application is at your own risk; 
-I accept no liability!***
+I accept no liability!
   
 
