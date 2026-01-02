@@ -17,7 +17,8 @@ flatpak install -y --user free.basti.oledsaver.flatpak
 ```  
   
 You can also build the application yourself from the transparent source code; here’s one way using Flatpak Builder.
-\  
+
+  
 ### Building and Installing with Flatpak Builder.  
 
 ### Preparation and Dev Depentencies:
