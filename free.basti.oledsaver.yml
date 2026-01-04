@@ -30,7 +30,7 @@ modules:
       - glib-compile-resources src/resources.xml --sourcedir=data/icons/ --generate-source --target=src/free.basti.oledsaver.gresource.c 
 
       # ----- Kompilieren der Anwendung -----
-      - gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o _build/bin/bastis-oledsaver src/main.c src/free.basti.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1) -Wno-deprecated-declarations
+      - gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o _build/bin/bastis-oledsaver src/main.c src/free.basti.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1) -lm -Wno-deprecated-declarations
 
       # ----- Warunungen unterdrücken -----
       
@@ -39,7 +39,7 @@ modules:
       - msgfmt src/po/en_US.po --output-file=_build/share/locale/en_US/LC_MESSAGES/bastis-oledsaver.mo
       - msgfmt src/po/en_GB.po --output-file=_build/share/locale/en_GB/LC_MESSAGES/bastis-oledsaver.mo
 
-      # ----- Installation
+      # ----- Installations
       - install -D -m 0755 _build/bin/bastis-oledsaver /app/bin/bastis-oledsaver
       - install -D -m 0644 packaging/free.basti.oledsaver.desktop /app/share/applications/free.basti.oledsaver.desktop
       - install -D -m 0644 packaging/free.basti.oledsaver.metainfo.xml /app/share/metainfo/free.basti.oledsaver.metainfo.xml

@@ -1,0 +1,7 @@
+{
+  "name": "OLED Saver",
+  "summary": "Standby Prevention Tool and Screen Saver for OLED Displays",
+  "description": "This application prevent the device from standby. You can display a black fullscreen to protect the OLED from burn-in. (s) "
+"_comment": "Remote information for Gnome Software Center "
+}
+

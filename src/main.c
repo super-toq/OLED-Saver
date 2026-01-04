@@ -1,9 +1,9 @@
-/* free.basti.oledsaver by toq 2025
+/* free.basti.oledsaver by toq 2025 - 2026 
  * LICENSE: BSD 2-Clause "Simplified"
  *
  *
  *
- * gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o oledsaver main.c free.basti.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1)
+ * gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o _build/bin/bastis-oledsaver src/main.c src/free.basti.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1) -lm -Wno-deprecated-declarations
  *
  *
  *
@@ -16,11 +16,13 @@
 #include <adwaita.h>
 #include "icon-gresource.h" // binäre Icons
 #include <string.h>         // für strstr()
+#include <time.h>           // für Zeit...
+#include <math.h>           // Mathe.Bibliothek für Berechnung der Mauskoordinatenveränderung (sqrt)
 #include <dbus/dbus.h>      // für DBusConnection,DBusMessage,dbus_bus_get(),dbus_message_new_method_call;
 #include <locale.h>         // für setlocale(LC_ALL, "")
 #include <glib/gi18n.h>     // für _();
 
-#define APP_VERSION    "1.0.8"//_0
+#define APP_VERSION    "1.0.9"//_0
 #define APP_ID         "free.basti.oledsaver"
 #define APP_NAME       "OLED Saver"
 #define APP_DOMAINNAME "bastis-oledsaver"
@@ -52,6 +54,18 @@ static int system_fd = -1;         // systemd/KDE-Inhibit (fd = File Descriptor/
                                    // geliefert von org.freedesktop.login1.Manager.Inhibit;
 guint fullscreen_timer_id = 0;
 
+/* ---------- Hilfsfunktion: Aktuelle Zeit als String ------------------------------- */
+static const char *time_str(void) {
+    static char buf[20];                 // "YYYY-MM-DD HH:MM:SS"
+    time_t   now = time(NULL);           // Zeit jetzt (Epoch)
+    struct tm tm;
+
+    /* Zeit in String konvertieren  */
+    localtime_r(&now, &tm);
+    strftime(buf, sizeof(buf), "%F %T", &tm);   // Format: 2025-12-09 14:23:45
+    return buf;
+}
+
 /* ----- GNOME ScreenSaver Inhibit ---------------------------------- */
 static void start_gnome_inhibit(void) { // Noch umbauen mit Rückmeldung bei Erfolg, wie STOP-Vorgang
     DBusError err;
@@ -77,9 +91,10 @@ static void start_gnome_inhibit(void) { // Noch umbauen mit Rückmeldung bei Erf
     
     if (!msg) {
         g_warning("[GNOME] Error creating the DBus message (1)\n");
-        return; }
+        return; 
+    }
 
-    const char *app = "OLED-Saver";
+    const char *app = APP_NAME;
     const char *reason = "Prevent Standby";
     dbus_message_iter_init_append(msg, &args);
     dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &app);
@@ -105,13 +120,13 @@ static void start_gnome_inhibit(void) { // Noch umbauen mit Rückmeldung bei Erf
     }
 
     dbus_message_iter_get_basic(&iter, &gnome_cookie);
-    g_print("[GNOME] Inhibit active (cookie=%u)\n", gnome_cookie);
+    g_print("%s [GNOME] Inhibit active (cookie=%u)\n", time_str(), gnome_cookie);
 
     dbus_message_unref(msg);
     dbus_message_unref(reply);
 }
 
-/* ----- Stopt Gnome Inhibit ---------------------------------------- */
+/* ----- Stop Gnome Inhibit ----------------------------------------- */
 static gboolean stop_gnome_inhibit(GError **error) 
 {
     if (!gnome_cookie) return TRUE; // True wenn kein Cookie vorhanden
@@ -145,7 +160,7 @@ static gboolean stop_gnome_inhibit(GError **error)
 
     dbus_connection_send(conn, msg, NULL);
     dbus_message_unref(msg);
-    g_print("[GNOME] Inhibit closed (cookie=%u)\n", gnome_cookie);
+    g_print("%s [GNOME] Inhibit closed (cookie=%u)\n", time_str(), gnome_cookie);
     gnome_cookie = 0;
     return TRUE; // Erfolgreich beendet - Rückgabe true
 }
@@ -209,7 +224,7 @@ static void start_system_inhibit(void) { // Noch umbauen mit Rückmeldung bei Er
     }
 
     dbus_message_iter_get_basic(&iter, &system_fd);
-    g_print("[SYSTEM] Inhibit active (fd=%d)\n", system_fd);
+    g_print("%s [SYSTEM] Inhibit active (fd=%d)\n", time_str(), system_fd);
     /* Aufräumen */
     dbus_message_unref(msg);
     dbus_message_unref(reply);
@@ -219,9 +234,9 @@ static void start_system_inhibit(void) { // Noch umbauen mit Rückmeldung bei Er
 static gboolean stop_system_inhibit(GError **error) 
 {
     if (system_fd < 0) return FALSE; // kein fd - Rückgabe false
-        close(system_fd);
-        system_fd = -1;
-        g_print("[System] Preventing standby has been stopped\n");
+    close(system_fd);
+    system_fd = -1;
+    g_print("%s [System] Preventing standby has been stopped\n", time_str());
     return TRUE; // erfolgreich beendet - Rückgabe true
 }
 
@@ -231,8 +246,7 @@ static void start_standby_prevention(void) {  // Noch umbauen mit Rückmeldung b
     if (de == DESKTOP_GNOME) start_gnome_inhibit();
         start_system_inhibit(); // KDE, XFCE, MATE
 }
-
-/* --- STOP-Wrapper --- ausgelöst beim shutdown --------------------- */
+/* --- STOP-Wrapper --- ausgelöst durch die Buttons ----------------- */
 static gboolean stop_standby_prevention(GError **error) 
 {
 
@@ -253,23 +267,61 @@ static gboolean stop_standby_prevention(GError **error)
          aktiviert von enable_mouse_exit_after_delay() -------------- */
 static gboolean exit_fullscreen(GtkEventControllerMotion *controller, gdouble x, gdouble y, gpointer user_data)
 {
+    /* 1. Koordinaten und Mausbewegung */
+    static gdouble last_x = 0, last_y = 0;
+    const gdouble threshold = 50.0; // Bewegungsuntergrenze in Pixeln
 
-    /* Timer für Fenster-im-Vordergrund-halten beenden */
+    /* 1.1 Anfangsbewegung */
+    if (last_x == 0 && last_y == 0) {
+        last_x = x;
+        last_y = y;
+        return TRUE; // Ignoriere die Anfangs-Bewegung (im Moment Doppelmoppel da Anfangstimer , testen !! )
+    }
+
+    /* 1.2 Distanz zur letzten Position berechnen (Formel für Bewegung in 2D Raum, euklidische Distanz) */
+    gdouble dx = x - last_x;
+    gdouble dy = y - last_y;
+    gdouble distance = sqrt(dx * dx + dy * dy); // sqrt = Quadratwurzelberechnung, d=(x2​−x1​)2+(y2​−y1​)2
+    /* Distanz anzeigen: */
+    //g_print("%s Mouse movement: dx: %f, dy: %f, distance: %f pixels\n", time_str(), dx, dy, distance); // Koordinaten und Distanz
+    g_print("%s Mouse movement: %f pixels\n", time_str(), distance); // nur Distanz
+
+    /* 1.3 Wenn Bewegung kleiner als der Schwellenwert, dann ignorieren */
+    if (distance < threshold) {
+        return TRUE; // Abbrechen, da min. Bewegung ignoriert werden soll
+    }
+
+    /* 1.4 aktuelle Koordinaten für den nächsten Aufruf der Funktion speichern */
+    last_x = x;
+    last_y = y;
+
+
+    /* 2. Zeiger auf fullscreen_window für diese Funktion setzen */
     GtkWindow *fullscreen_window = GTK_WINDOW(user_data);
+
+    /* 2.1 Überprüfen, ob das Fenster überhaupt gültig ist */
+    if (fullscreen_window == NULL) { 
+        g_print("%s Error: No valid window found to close.\n", time_str());
+
+        // <- Hier noch einbauen, disconnect-Routine für Motioncontroller falls noch aktiv !!
+        return FALSE; 
+    }
+
+    /* 3. Timer für Fenster-im-Vordergrund-halten beenden */
     if (fullscreen_timer_id > 0) {
         g_source_remove(fullscreen_timer_id);
         fullscreen_timer_id = 0;
     }
 
-    /* Motion-Handler von diesem Controller trennen. [r!] */
+    /* 4. Motion-Handler von diesem Controller trennen. [r!] */
     g_signal_handlers_disconnect_by_func(controller, exit_fullscreen, user_data);
 
-    /* Zerstörung, aus dem aktuellen Event-Stack heraus */
+    /* 4.1 Zerstörung, aus dem aktuellen Event-Stack heraus */
     g_object_ref(fullscreen_window);
     g_idle_add((GSourceFunc)gtk_window_destroy, fullscreen_window);
     g_object_unref(fullscreen_window);
 
-    g_print("Mouse motion exits fullscreen\n");
+    g_print("%s Mouse motion exits fullscreen\n", time_str());
     return TRUE;
 }
 
@@ -323,7 +375,7 @@ static void show_about(GSimpleAction *action, GVariant *parameter, gpointer user
     /* Lizenz – BSD2 wird als „custom“ angegeben */
     adw_about_dialog_set_license_type(about, GTK_LICENSE_BSD);
     adw_about_dialog_set_license(about,
-        "Copyright © 2025, super-toq\n\n"
+        "Copyright © 2025 - 2026, super-toq\n\n"
         "This program comes WITHOUT ANY WARRANTY.\n"
         "Follow the link to view the license details: "
         "<a href=\"https://opensource.org/license/BSD-2-Clause\"><b>BSD 2-Clause License</b></a>\n"
@@ -375,17 +427,17 @@ static gboolean keep_window_on_top(gpointer user_data)
     
     // Sicherheitsüberprüfungen
     if (fullscreen_window == NULL || !GTK_IS_WINDOW(fullscreen_window)) {
-        g_print("Invalid window in keep_window_on_top\n");
+        g_print("%s Invalid window in keep_window_on_top\n", time_str());
         return G_SOURCE_REMOVE; // Timer beendet
     }
 
     if (!GTK_IS_WINDOW(fullscreen_window)) {
-        g_print("Not a valid GTK window in keep_window_on_top\n");
+        g_print("%s Not a valid GTK window in keep_window_on_top\n", time_str());
         return G_SOURCE_REMOVE; // Timer beendet
     }
 
     
-    g_print("keep window top\n");
+    g_print("%s keep window top\n", time_str());
     // Fenster verstecken
     gtk_widget_hide(GTK_WIDGET(fullscreen_window));
 
@@ -446,7 +498,7 @@ static void on_fullscreen_button_clicked(GtkButton *button, gpointer user_data)
     /* 3.2 aufrufen von keep_window_on_top() wenn Checkbox True */
     if (is_active) {
     /* 3 Timer um Fenster wieder in den Vordergrund zu holen, siehe keep_window_on_top() */
-    g_print ("window top is activated\n");
+    g_print ("%s window top is activated\n", time_str());
     fullscreen_timer_id = g_timeout_add_seconds(120, keep_window_on_top, fullscreen_window);
     }
 
@@ -456,10 +508,9 @@ static void on_fullscreen_button_clicked(GtkButton *button, gpointer user_data)
 static void on_quitbutton_clicked(GtkButton *button, gpointer user_data)
 {
     GError *error = NULL;
+    g_print("%s Applicaton will now shut down\n", time_str());
     if (stop_standby_prevention(&error)) {
         /* Rückmeldung aus stop_standby_prevention (stop_sp) */
-        g_print("Applicaton will now shut down\n");
-
      // Hier Ausbau für Rückmeldung (TRUE) !!
 
     } else {
@@ -544,13 +595,13 @@ static void on_activate(AdwApplication *app, gpointer user_data)
 
     /* ---- Haupt-Box ----------------------------------------------- */
     GtkBox *main_box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 12));
-//    gtk_box_set_spacing(GTK_BOX(main_box), -0);               // Minus-Spacer, zieht unteren Teil nach oben
-    gtk_widget_set_margin_top    (GTK_WIDGET (main_box), 20);
-    gtk_widget_set_margin_bottom (GTK_WIDGET (main_box), 20);
-    gtk_widget_set_margin_start  (GTK_WIDGET (main_box), 20);
-    gtk_widget_set_margin_end    (GTK_WIDGET (main_box), 20);
-    gtk_widget_set_hexpand     (GTK_WIDGET (main_box), TRUE);
-    gtk_widget_set_vexpand     (GTK_WIDGET (main_box), TRUE);
+//    gtk_box_set_spacing(GTK_BOX(main_box), -0);                // Minus-Spacer, zieht unteren Teil nach oben
+    gtk_widget_set_margin_top   (GTK_WIDGET(main_box),    20);   // Rand unterhalb Toolbar
+    gtk_widget_set_margin_bottom(GTK_WIDGET(main_box),    20);   // unterer Rand unteh. der Buttons
+    gtk_widget_set_margin_start (GTK_WIDGET(main_box),    15);   // links
+    gtk_widget_set_margin_end   (GTK_WIDGET(main_box),    15);   // rechts
+    gtk_widget_set_hexpand      (GTK_WIDGET(main_box),  TRUE);
+    gtk_widget_set_vexpand      (GTK_WIDGET(main_box), FALSE);
 
     /* ----- Label1 ------------------------------------------------- */
     GtkWidget *label1 = gtk_label_new(_("Blackscreen statt Burn-in! \n"));
@@ -654,6 +705,7 @@ static void on_activate(AdwApplication *app, gpointer user_data)
 /* --------------------------------------------------------------------------- */
 int main(int argc, char **argv)
 {
+    g_print("%s Application is starting...\n", time_str());
     char *app_dir = g_get_current_dir();  // Ermit. den aktuellen Arbeitsverzeichnis-Pfad
     const char *locale_path = NULL;
     const char *flatpak_id = getenv("FLATPAK_ID"); //flatpak string free.toq.finden anderenfalls NULL !
@@ -680,7 +732,7 @@ int main(int argc, char **argv)
     g_autoptr(AdwApplication) app =      // Instanz erstellen + App-ID + Default-Flags;
                         adw_application_new(APP_ID, G_APPLICATION_DEFAULT_FLAGS);
 
-    g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL); // Signal mit on_activate verbinden
+    g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
     //g_signal_connect(app, "shutdown", G_CALLBACK(stop_standby_prevention), NULL);
     /* --- g_application_run startet Anwendung u. wartet auf Ereignis --- */
     return g_application_run(G_APPLICATION(app), argc, argv);

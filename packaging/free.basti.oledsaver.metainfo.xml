@@ -30,24 +30,22 @@
   </keywords>
   <!-- Screenshot (direkter PNG‑Link, z. B. über GitHub Pages) -->
   <screenshots>
-      <screenshot type="default" style="dark">
+      <screenshot type="default">
         <caption>OLED Saver main window</caption>
         <image type="source">https://raw.githubusercontent.com/super-toq/OLED-Saver/refs/heads/main/packaging/oledsaver_preview_img2.png</image>
     </screenshot>
   </screenshots> 
   <!-- Releases Information  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    -->
 <releases>
-  <release version="1.0.8" date="2025-12-29">
+  <release version="1.0.9" date="2026-01-04">
     <description>
-      <p>This release includes improvements for a better user experience.</p>
+      <p>This release includes improvements for a better user experience. </p>
       <ul>
-        <li>For changelog information, see GitHub Releases.</li>
+        <li>For changelogs, see GitHub Releases.</li>
       </ul>
     </description>
   </release>
-<!--  <release version="1.0.4" date="2025-11-29" />
-  <release version="1.0.1" date="2025-11-23" />
-  <release version="1.0" date="2025-11-21" /> -->
+<!--  <release version="1.0.4" date="2025-11-29" /> -->
 </releases>
 
   <content_rating type="oars-1.1" />
