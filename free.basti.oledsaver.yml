@@ -13,6 +13,7 @@ finish-args:
   - --device=dri                                          # GPU...
   - --talk-name=org.freedesktop.login1                    # systemd-Inhibit
   - --talk-name=org.freedesktop.ScreenSaver               # anscheinend nicht in Flatpak zulässig!
+#  - --filesystem=home                                     # (für Config nicht notwendig)
 #  - --talk-name=org.kde.Solid.PowerManagement.PolicyAgent # KDE Inhibit
 #  - --filesystem=home                                     # Zugriff auf USER-Daten
 #  - --env=LC_ALL=C.UTF-8                                  # Lokalisierung
@@ -30,7 +31,7 @@ modules:
       - glib-compile-resources src/resources.xml --sourcedir=data/icons/ --generate-source --target=src/free.basti.oledsaver.gresource.c 
 
       # ----- Kompilieren der Anwendung -----
-      - gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o _build/bin/bastis-oledsaver src/main.c src/free.basti.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1) -lm -Wno-deprecated-declarations
+      - gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o _build/bin/bastis-oledsaver src/main.c src/time_stamp.c src/log_file.c src/config.c src/free.basti.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1) -lm -Wno-deprecated-declarations
 
       # ----- Warunungen unterdrücken -----
       
