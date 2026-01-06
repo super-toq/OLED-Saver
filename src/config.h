@@ -6,7 +6,7 @@
  * Globalen Struktur FindConfig g_cfg und 
  * Deklaration init_environment(), init_config(), save_config(), config_cleanup().
  *
- * Version 2026-01-05
+ * Version 2026-01-06
  */
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -15,19 +15,20 @@
 
 /* ----- Globale Struktur um Konfigurations-Parameter zu kapseln ------------ */
 typedef struct {
-    int mouse_move_limit;           // Zahl zwischen 50 - 200
-    gboolean     use_key;           // zukünftige Einstellungen
-    gboolean  log_enable;           // logging in Datei
+    int mouse_move_limit;                  // Zahl zwischen 50 - 200
+    gboolean     use_key;                  // zukünftige Einstellungen
+    gboolean  log_enable;                  // logging in Datei
 } FindConfig;
-extern FindConfig  g_cfg;           // Globale Instanz
+extern FindConfig  g_cfg;                  // Globale Instanz
 
 /* ----- Funktionen, die von außen aufgerufen werden ----------------------- */
-void init_environment(void);        // Pfade ermitteln
-void init_config     (void);        // Datei anlegen / laden g_cfg befüllen
-void save_config     (void);        // g_cfg Datei schreiben
-void config_cleanup  (void);        // Aufräumen
+void init_environment(void);               // Pfade ermitteln
+void init_config     (void);               // Datei anlegen / laden g_cfg befüllen
+void save_config     (void);               // g_cfg Datei schreiben
+void config_cleanup  (void);               // Aufräumen
 
-const gchar *config_get_path(void); // Pfad zur Config-Verzeichnis abfragen
-const gchar *home_get_path(void);   // Pfad zur Config-Verzeichnis abfragen
+const gchar *config_get_config_path(void); // Pfad zur Config-Verzeichnis abfragen
+const gchar *config_get_home_path(void);   // Pfad zur Config-Verzeichnis abfragen
+const gchar *config_get_flatpak_id(void);
 
 #endif //CONFIG_H

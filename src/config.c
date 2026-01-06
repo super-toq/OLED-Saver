@@ -11,18 +11,20 @@
  *  g_cfg.mouse_move_limit
  *  g_cfg.use_key
  *  g_cfg.log_enable
- *  config_get_path()
- *  home_path() verwenden anhand: " const gchar *home = home_get_path(); " = readonly, nicht g_free
- * Version 2026-01-04
+ *  config_get_config_path()
+ *  home_path - verwenden anhand: " const gchar *home = config_get_home_path(); " = readonly, nicht g_free
+ *  flatpak_id - per config_get_flatpak_id()
+ * Version 2026-01-06
  */
 
 #include "config.h"
 #include <glib.h>
 
 /* ----- Globale Variablen ------------------ */
-static gchar       *config_path = NULL;    // Vollständiger Pfad zur .cfg-Datei / eigenes -> g_free()
+static gchar       *config_path = NULL;    // Vollständiger Pfad zur .cfg-Datei / "eigenes" -> g_free()
 static GKeyFile    *key_file    = NULL;    // In-Memory-Repräsentation der Datei
-static const gchar *home_path   = NULL;    // Homeverzeichnis / GLib-owned
+static const gchar *home_path   = NULL;    // Homeverzeichnis readonly / GLib-owned
+static const gchar *flatpak_id  = NULL;    // Flatpak ID readonly / GLib-owned
 
 /* ----- Globale Struktur der Keys ---------- */
 FindConfig g_cfg = {            // Standard-Werte, falls alles fehlschlägt
@@ -30,16 +32,22 @@ FindConfig g_cfg = {            // Standard-Werte, falls alles fehlschlägt
     .use_key          = FALSE,
     .log_enable       = FALSE
 };
-/* ---- Getter-Funktion ---- */ // (Info für mich: nur so übermitteln)
-const gchar *config_get_path(void)
+/* ---- Getter-Funktionen ---- */ // (Info für mich: nur so übermitteln)
+const gchar *config_get_config_path(void)
 {
     return config_path;
 }
 
-const gchar *home_get_path(void)
+const gchar *config_get_flatpak_id(void) 
+{
+    return flatpak_id;
+}
+
+const gchar *config_get_home_path(void)
 {
     return home_path;
 }
+
 /* ----- Environment --------------------------------------------------------------------- */
 void init_environment(void)
 {
@@ -50,8 +58,8 @@ void init_environment(void)
     home_path = g_get_home_dir();
 
     const gchar *user_config_dir = g_get_user_config_dir();
-    //config_path = g_build_filename(user_config_dir, "basti-oledsaver", "oledsaver.cfg", NULL);                  // normal
-    config_path = g_build_filename(user_config_dir, "oledsaver", "oledsaver.cfg", NULL);                                     // flatpak
+    //config_path = g_build_filename(user_config_dir, "bastis-oledsaver", "settings.cfg", NULL);  // normal
+    config_path = g_build_filename(user_config_dir, "bastis-oledsaver", "settings.cfg", NULL);        // flatpak
 
     g_print("[Config] Configuration file path: %s\n", config_path);
 }
