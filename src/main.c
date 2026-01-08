@@ -11,7 +11,7 @@
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
  *
  */
-#define APP_VERSION    "1.1.4"//_0
+#define APP_VERSION    "1.1.5"//_0
 #define APP_ID         "free.basti.oledsaver"
 #define APP_NAME       "OLED Saver"
 #define APP_DOMAINNAME "bastis-oledsaver"
@@ -166,7 +166,7 @@ static gboolean stop_gnome_inhibit(GError **error)
 
     dbus_connection_send(conn, msg, NULL);
     dbus_message_unref(msg);
-    g_print("[%s] [GNOME-INHIBIT] Inhibit closed with cookie=%u\n", time_stamp(), gnome_cookie);
+    g_print("[%s] [GNOME-INHIBIT] Inhibit closed (cookie=%u)\n", time_stamp(), gnome_cookie);
     gnome_cookie = 0;
     return TRUE; // Erfolgreich beendet - Rückgabe true
 }
@@ -230,7 +230,7 @@ static void start_system_inhibit(void) { // Noch umbauen mit Rückmeldung bei Er
     }
 
     dbus_message_iter_get_basic(&iter, &system_fd);
-    g_print("[%s] [SYSTEM-INHIBIT] Inhibit activated with fd=%d\n", time_stamp(), system_fd);
+    g_print("[%s] [SYSTEM-INHIBIT] Inhibit activated (fd=%d)\n", time_stamp(), system_fd);
     /* Aufräumen */
     dbus_message_unref(msg);
     dbus_message_unref(reply);
@@ -242,7 +242,7 @@ static gboolean stop_system_inhibit(GError **error)
     if (system_fd < 0) return FALSE; // kein fd - Rückgabe false
     close(system_fd);
     system_fd = -1;
-    g_print("[%s] [SYSTEM-INHIBIT] Preventing standby has been stopped\n", time_stamp());
+    g_print("[%s] [SYSTEM-INHIBIT] Inhibit closed (fd=%d)\n", time_stamp(), system_fd);
     return TRUE; // erfolgreich beendet - Rückgabe true
 }
 
@@ -257,7 +257,7 @@ static void start_standby_prevention(void) {  // Noch umbauen mit Rückmeldung b
 static gboolean stop_standby_prevention(GError **error) 
 {
 
-    gboolean stop_sp = TRUE; // Erfolg meldet TRUE zurück und als GError übermittelt
+    gboolean stop_sp = TRUE; // TRUE wenn kein Fehler
 
     if (!stop_gnome_inhibit (error))
         stop_sp = FALSE;
@@ -265,6 +265,7 @@ static gboolean stop_standby_prevention(GError **error)
     if (!stop_system_inhibit (error))
         stop_sp = FALSE;
 
+    if (stop_sp) g_print("[%s] [INFO] Preventing standby has been stopped\n", time_stamp());
     return stop_sp;
 }
 /* ------------------------------------------------------------------ */
@@ -484,6 +485,18 @@ static void on_combo_changed(GObject *obj, GParamSpec *pspec, gpointer user_data
     save_config();
 }
 
+/* ----- Verzeichnis zur Log-Datei öffnen ----------------------------------------------- */
+static void open_log_folder(GtkButton *button, gpointer user_data)
+{
+    const char *path = user_data;
+    char *uri = g_filename_to_uri(path, NULL, NULL);
+
+    if (uri) {
+        gtk_show_uri(NULL, uri, GDK_CURRENT_TIME);
+        g_free(uri);
+    }
+}
+
 /* ----- In Einstellungen: Schalter1-Toggle --------------------------------------------- */
 static void on_settings_use_key_switch_row_toggled(GObject *object1, GParamSpec *pspec, gpointer user_data)
 {
@@ -572,27 +585,54 @@ static void show_settings(GSimpleAction *action, GVariant *parameter, gpointer u
     adw_switch_row_set_active(ADW_SWITCH_ROW(switch_row1), g_cfg.use_key);
     gtk_widget_set_sensitive(GTK_WIDGET(switch_row1), TRUE);    //Aktiviert/Deaktiviert
 
-    /* ----- AdwSwitchRow2 erzeugen --------- */
-    AdwSwitchRow *switch_row2 = ADW_SWITCH_ROW(adw_switch_row_new());
-    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(switch_row2), 
-                                                    _("Debug-Datei erstellen"));
-    adw_action_row_set_subtitle(ADW_ACTION_ROW(switch_row2),
-     _("Protokollausgaben in eine Datei schreiben"));
-    /* Schalter-Aktivierung abhängig von gesetzten g_cfg.miniterm_enable Wert: */
-    adw_switch_row_set_active(ADW_SWITCH_ROW(switch_row2), g_cfg.log_enable);
-    gtk_widget_set_sensitive(GTK_WIDGET(switch_row2), TRUE);    //Aktiviert/Deaktiviert
+//    /* ----- AdwSwitchRow2 erzeugen --------- */ // Version 1.1.4
+//    AdwSwitchRow *switch_row2 = ADW_SWITCH_ROW(adw_switch_row_new());
+//    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(switch_row2), 
+//                                                    _("Debug-Datei erstellen"));
+//    adw_action_row_set_subtitle(ADW_ACTION_ROW(switch_row2),
+//     _("Protokollausgaben in eine Datei schreiben"));
+//    /* Schalter-Aktivierung abhängig von gesetzten g_cfg.miniterm_enable Wert: */
+//    adw_switch_row_set_active(ADW_SWITCH_ROW(switch_row2), g_cfg.log_enable);
+//    gtk_widget_set_sensitive(GTK_WIDGET(switch_row2), TRUE);    //Aktiviert/Deaktiviert
+
+
+    /* ----- ActionRow erstellen --(ab Version 1.1.5)------------------------------------- Action ROW ------ */
+    AdwActionRow *action_row = ADW_ACTION_ROW(adw_action_row_new());
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(action_row), _("Debug-Datei erstellen"));
+    adw_action_row_set_subtitle(action_row, _("Protokollausgaben in eine Datei schreiben"));
+
+    /* ----- Button für Log-Folder erstellen ------------------- */
+    const gchar *home = config_get_home_path();                                        // aus config.c
+    gchar *homepath = g_build_filename(home, ".var/app/free.basti.oledsaver/.local/state/bastis-oledsaver", NULL);
+
+    GtkWidget *folder_button = gtk_button_new_from_icon_name("folder-open-symbolic");
+    gtk_button_set_has_frame(GTK_BUTTON(folder_button), FALSE);                        // Button-Rahmen entfernen
+    gtk_widget_set_valign(folder_button, GTK_ALIGN_CENTER);
+    g_signal_connect(folder_button, "clicked", G_CALLBACK(open_log_folder),homepath);
+
+    /* ----- Switch für ActionRow erstellen ------ */
+    GtkWidget *log_enable_switch = gtk_switch_new();
+    gtk_switch_set_active(GTK_SWITCH(log_enable_switch), g_cfg.log_enable);            // Schalterstellung abhängig von config
+    gtk_widget_set_valign(log_enable_switch, GTK_ALIGN_CENTER);
+
+    /* ----- Objekte in die ActionRow einfügen ------ */
+    adw_action_row_add_prefix(action_row, folder_button);
+    adw_action_row_add_suffix(action_row, log_enable_switch);
+    adw_action_row_set_activatable_widget(action_row, log_enable_switch);  /*------------ Action ROW ende -- */
+
 
     /* ----- AdwSwitchRow1 verbinden (use_key) -------- */
     g_signal_connect(switch_row1, "notify::active",
                                   G_CALLBACK( on_settings_use_key_switch_row_toggled), combo_row1); //combo_row1 ebenfalls übergeben um es zu deaktivieren
 
-    /* ----- AdwSwitchRow2  verbinden (log_enable) ------- */
-    g_signal_connect(switch_row2, "notify::active", 
-                                  G_CALLBACK(on_settings_log_enable_switch_row_toggled), NULL);
+    /* ----- AdwSwitchRow2  verbinden (log_enable) ------- */ // Version 1.1.4
+//    g_signal_connect(switch_row2, "notify::active", 
+//                                  G_CALLBACK(on_settings_log_enable_switch_row_toggled), NULL);
 
     /* ----- Rows zur PreferencesGruppe hinzufügen ----- */
     adw_preferences_group_add(settings_group, GTK_WIDGET(switch_row1));
-    adw_preferences_group_add(settings_group, GTK_WIDGET(switch_row2));
+    //adw_preferences_group_add(settings_group, GTK_WIDGET(switch_row2)); action_row
+adw_preferences_group_add(settings_group, GTK_WIDGET(action_row));
 
     /* ----- Pref.Gruppe in die Page einbauen ----- */
     gtk_box_append(GTK_BOX(settings_box), GTK_WIDGET(settings_group));
