@@ -11,7 +11,7 @@
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
  *
  */
-#define APP_VERSION    "1.1.3"//_0
+#define APP_VERSION    "1.1.4"//_0
 #define APP_ID         "free.basti.oledsaver"
 #define APP_NAME       "OLED Saver"
 #define APP_DOMAINNAME "bastis-oledsaver"
@@ -126,7 +126,7 @@ static void start_gnome_inhibit(void) { // Noch umbauen mit Rückmeldung bei Erf
     }
 
     dbus_message_iter_get_basic(&iter, &gnome_cookie);
-    g_print("[%s] [GNOME-INHIBIT] Inhibit active (cookie=%u)\n", time_stamp(), gnome_cookie);
+    g_print("[%s] [GNOME-INHIBIT] Inhibit activated (cookie=%u)\n", time_stamp(), gnome_cookie);
 
     dbus_message_unref(msg);
     dbus_message_unref(reply);
@@ -166,7 +166,7 @@ static gboolean stop_gnome_inhibit(GError **error)
 
     dbus_connection_send(conn, msg, NULL);
     dbus_message_unref(msg);
-    g_print("[%s] [GNOME-INHIBIT] Inhibit closed (cookie=%u)\n", time_stamp(), gnome_cookie);
+    g_print("[%s] [GNOME-INHIBIT] Inhibit closed with cookie=%u\n", time_stamp(), gnome_cookie);
     gnome_cookie = 0;
     return TRUE; // Erfolgreich beendet - Rückgabe true
 }
@@ -230,7 +230,7 @@ static void start_system_inhibit(void) { // Noch umbauen mit Rückmeldung bei Er
     }
 
     dbus_message_iter_get_basic(&iter, &system_fd);
-    g_print("[%s] [SYSTEM-INHIBIT] Inhibit active (fd=%d)\n", time_stamp(), system_fd);
+    g_print("[%s] [SYSTEM-INHIBIT] Inhibit activated with fd=%d\n", time_stamp(), system_fd);
     /* Aufräumen */
     dbus_message_unref(msg);
     dbus_message_unref(reply);
@@ -337,7 +337,7 @@ static gboolean exit_fullscreen_by_motion(GtkEventControllerMotion *controller, 
     g_idle_add((GSourceFunc)gtk_window_destroy, fullscreen_window);
     g_object_unref(fullscreen_window);
 
-    g_print("[%s] Mouse motion exits fullscreen\n", time_stamp());
+    g_print("[%s] [INFO] Mouse motion exits fullscreen\n", time_stamp());
     return TRUE;
 }
 
@@ -376,7 +376,7 @@ static gboolean exit_fullscreen_by_key(GtkEventControllerKey *controller,
     g_idle_add((GSourceFunc)gtk_window_destroy, fullscreen_window);
     g_object_unref(fullscreen_window);
 
-    g_print("[%s] Key pressed, exiting fullscreen\n", time_stamp());
+    g_print("[%s] [INFO] Key press exits fullscreen\n", time_stamp());
     return TRUE;
 }
 
@@ -386,9 +386,9 @@ static gboolean exit_fullscreen_by_key(GtkEventControllerKey *controller,
 static void on_alert_dialog_response(AdwAlertDialog *dialog, const char *response, gpointer user_data)
 {
     if (g_strcmp0 (response, "ok") == 0)
-        g_print("Dialog btn - ok\n");
+        g_print("[%s] [INFO] Dialog btn - ok\n", time_stamp());
     else
-        g_print("Dialog btn - cancel\n");
+        g_print("[%s] [INFO] Dialog btn - cancel\n", time_stamp());
 
     // Hinweis, hier kein g_object_unref(dialog)
 }
@@ -478,20 +478,24 @@ static void on_combo_changed(GObject *obj, GParamSpec *pspec, gpointer user_data
 {
     guint idx = adw_combo_row_get_selected(ADW_COMBO_ROW(obj));
     g_cfg.mouse_move_limit = pixel_options[idx].value;
-    g_print("[%s] [Settings] mouse_move_limit=%dpx\n", time_stamp(), g_cfg.mouse_move_limit);
+    g_print("[%s] [INFO] Settings: mouse_move_limit=%dpx\n", time_stamp(), g_cfg.mouse_move_limit);
 
     /* Wert auch in Settings.cfg speichern */
     save_config();
 }
 
 /* ----- In Einstellungen: Schalter1-Toggle --------------------------------------------- */
-static void on_settings_use_key_switch_row_toggled(GObject *object, GParamSpec *pspec, gpointer user_data)
+static void on_settings_use_key_switch_row_toggled(GObject *object1, GParamSpec *pspec, gpointer user_data)
 {
-    AdwSwitchRow *use_key_switch_row = ADW_SWITCH_ROW(object);
-    gboolean active = adw_switch_row_get_active(use_key_switch_row);
+    AdwSwitchRow *use_key_switch = ADW_SWITCH_ROW(object1);
+    gboolean active = adw_switch_row_get_active(use_key_switch);
     g_cfg.use_key = active;
     save_config(); // speichern
-    g_print("[%s] [Settings] use_key_switch=%s\n", time_stamp(), g_cfg.use_key ? "true" : "false"); // zum testen !!
+    g_print("[%s] [IFNO] Settings: use_key=%s\n", time_stamp(), g_cfg.use_key ? "true" : "false"); // zum testen !!
+
+    /* combo_row1 deaktivieren wenn use_key aktiviert wird; combo_row1 wird per user_data übergeben */
+    GtkWidget *combo_row1 = GTK_WIDGET(user_data);
+    gtk_widget_set_sensitive(combo_row1, g_cfg.use_key ? FALSE : TRUE);
 }
 
 /* ----- In Einstellungen: Schalter2-Toggle --------------------------------------------- */
@@ -501,7 +505,7 @@ static void on_settings_log_enable_switch_row_toggled(GObject *object, GParamSpe
     gboolean active = adw_switch_row_get_active(log_enable_switch_row);
     g_cfg.log_enable = active;
     save_config(); // speichern
-    g_print("[%s] [Settings] log_enable=%s\n", time_stamp(), g_cfg.log_enable ? "true" : "false"); // zum testen !!
+    g_print("[%s] [INFO] Settings: log_enable=%s\n", time_stamp(), g_cfg.log_enable ? "true" : "false"); // zum testen !!
 }
 
 /* ----- Einstellungen-Page ------------------------------------------ */
@@ -533,6 +537,31 @@ static void show_settings(GSimpleAction *action, GVariant *parameter, gpointer u
     adw_preferences_group_set_title(settings_group, _("Präferenzoptionen"));
     //adw_preferences_group_set_description(settings_group, _("Zusatzbeschreibung - Platzhalter"));
 
+    /* ----- Combo Row erstellen ---------------------------------------------- */
+    GtkWidget *combo_row1 = adw_combo_row_new();
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(combo_row1), 
+                                                    _("Minimalbewegungen zulassen"));
+    adw_action_row_set_subtitle(ADW_ACTION_ROW(combo_row1),
+     _("Mausbewegungsschwelle in Pixeln"));
+
+    /* ----- String_List der verfügbaren Optionen bauen ----- */
+    GtkStringList *string_list = gtk_string_list_new(NULL);
+
+    for (guint i = 0; i < G_N_ELEMENTS(pixel_options); i++) {
+    gtk_string_list_append(string_list, pixel_options[i].label);
+    }
+    adw_combo_row_set_model(ADW_COMBO_ROW(combo_row1), G_LIST_MODEL(string_list));
+    
+    /* ----- ComboRow-Option per Index setzen [ guint in value_to_combo_index()] ----- !! */ 
+    adw_combo_row_set_selected(ADW_COMBO_ROW(combo_row1),value_to_combo_index(g_cfg.mouse_move_limit));
+
+    /* ----- ComboRow verbinden ----------------------------- */
+    g_signal_connect(combo_row1, "notify::selected", G_CALLBACK(on_combo_changed), NULL);
+    
+    /* ----- Combo Row zur PreferencesGroup hinzufügen ----- */
+    adw_preferences_group_add(settings_group, combo_row1);
+    /* ------------------------------------------------------------- Ende Combo Box */
+
     /* ----- AdwSwitchRow1 erzeugen --------- */
     AdwSwitchRow *switch_row1 = ADW_SWITCH_ROW(adw_switch_row_new());
     adw_preferences_row_set_title(ADW_PREFERENCES_ROW(switch_row1), 
@@ -553,42 +582,13 @@ static void show_settings(GSimpleAction *action, GVariant *parameter, gpointer u
     adw_switch_row_set_active(ADW_SWITCH_ROW(switch_row2), g_cfg.log_enable);
     gtk_widget_set_sensitive(GTK_WIDGET(switch_row2), TRUE);    //Aktiviert/Deaktiviert
 
-    /* ----- AdwSwitchRow1 verbinden -------- */
+    /* ----- AdwSwitchRow1 verbinden (use_key) -------- */
     g_signal_connect(switch_row1, "notify::active",
-                                  G_CALLBACK( on_settings_use_key_switch_row_toggled),   NULL);
+                                  G_CALLBACK( on_settings_use_key_switch_row_toggled), combo_row1); //combo_row1 ebenfalls übergeben um es zu deaktivieren
 
-    /* ----- AdwSwitchRow2  verbinden ------- */
+    /* ----- AdwSwitchRow2  verbinden (log_enable) ------- */
     g_signal_connect(switch_row2, "notify::active", 
                                   G_CALLBACK(on_settings_log_enable_switch_row_toggled), NULL);
-
-
-    /* ----- Combo Row erstellen ---------------------------------------------- */
-    GtkWidget *combo_row1 = adw_combo_row_new();
-    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(combo_row1), 
-                                                    _("Minimalbewegungen zulassen"));
-    adw_action_row_set_subtitle(ADW_ACTION_ROW(combo_row1),
-     _("Mausbewegungsschwelle in Pixeln"));
-
-    /* ----- String_List der verfügbaren Optionen bauen ----- */
-    GtkStringList *string_list = gtk_string_list_new(NULL);
-
-    for (guint i = 0; i < G_N_ELEMENTS(pixel_options); i++) {
-    gtk_string_list_append(string_list, pixel_options[i].label);
-    }
-    adw_combo_row_set_model(ADW_COMBO_ROW(combo_row1), G_LIST_MODEL(string_list));
-    
-    /* ----- Werte auslesen mit  value_to_combo_index() ----- !! */
-   // guint combo_index = value_to_combo_index(g_cfg.mouse_move_limit);
-
-    /* ----- ComboRow-Option per Index setzen ----- !! */ 
-    adw_combo_row_set_selected(ADW_COMBO_ROW(combo_row1),value_to_combo_index(g_cfg.mouse_move_limit));
-
-    /* ----- ComboRow verbinden ----------------------------- */
-    g_signal_connect(combo_row1, "notify::selected", G_CALLBACK(on_combo_changed), NULL);
-    
-    /* ----- Combo Row zur PreferencesGroup hinzufügen ----- */
-    adw_preferences_group_add(settings_group, combo_row1);
-    /* ------------------------------------------------------------- Ende Combo Box */
 
     /* ----- Rows zur PreferencesGruppe hinzufügen ----- */
     adw_preferences_group_add(settings_group, GTK_WIDGET(switch_row1));
@@ -720,7 +720,7 @@ static void on_fullscreen_button_clicked(GtkButton *button, gpointer user_data)
 static void on_quitbutton_clicked(GtkButton *button, gpointer user_data)
 {
     GError *error = NULL;
-    g_print("[%s] Applicaton will now shut down\n", time_stamp());
+    g_print("[%s] [INFO] Applicaton will now shut down\n", time_stamp());
     if (stop_standby_prevention(&error)) {
         /* Rückmeldung aus stop_standby_prevention (stop_sp) */
      // Hier Ausbau für Rückmeldung (TRUE) !!
@@ -932,7 +932,7 @@ static void on_activate(AdwApplication *app, gpointer user_data)
 int main(int argc, char **argv)
 {
     /* 0. Print nur für Terminalausgabe */
-    g_print("[%s] Application is starting...\n", time_stamp());
+    g_print("[%s] [INFO] Application is starting...\n", time_stamp());
 
     /* 1. Instanz erstellen, mit App-ID und Default-Flags */
     g_autoptr(AdwApplication) app =
@@ -955,7 +955,7 @@ int main(int argc, char **argv)
     setlocale(LC_ALL, "");                                  // ruft die aktuelle Locale des Prozesses ab
 //    setlocale(LC_ALL, "en_US.UTF-8");                     // explizit, zum testen!!
     textdomain             (APP_DOMAINNAME);                // textdomain festlegen
-    g_print("flatpak_id %s\n", flatpak_id);
+    g_print("[%s] [INFO] flatpak_id %s\n",time_stamp(), flatpak_id);
     bind_textdomain_codeset(APP_DOMAINNAME, "UTF-8"); 
     if (flatpak_id != NULL && flatpak_id[0] != '\0')
     {
@@ -964,7 +964,7 @@ int main(int argc, char **argv)
         locale_path = "/usr/share/locale";
     }
     bindtextdomain         (APP_DOMAINNAME, locale_path);
-    g_print("Localization files in: %s \n", locale_path); // testen!!
+    g_print("[%s] [INFO] Localization files in: %s \n", time_stamp(), locale_path); // testen!!
 
     /* 5. Resource‑Bundle registrieren */
     g_resources_register(resources_get_resource());
