@@ -17,6 +17,7 @@
  * Version 2026-01-06
  */
 
+#include "time_stamp.h"
 #include "config.h"
 #include <glib.h>
 
@@ -61,7 +62,7 @@ void init_environment(void)
     //config_path = g_build_filename(user_config_dir, "bastis-oledsaver", "settings.cfg", NULL);  // normal
     config_path = g_build_filename(user_config_dir, "bastis-oledsaver", "settings.cfg", NULL);        // flatpak
 
-    g_print("[Config] Configuration file path: %s\n", config_path);
+    g_print("[%s] [Config] Configuration file path: %s\n", time_stamp(), config_path);
 }
 
 /* ----- Config-Initialisierung - Laden / Anlegen ---------------------------------------- */
@@ -70,7 +71,7 @@ void init_config(void)
     GError *error = NULL;
 
     if (!config_path) {
-        g_warning("[Config] init_environment() not called\n");
+        g_warning("[%s] [Config] init_environment() not called\n");
         return;
     }
 
@@ -80,7 +81,7 @@ void init_config(void)
     /* Config-Verzeichnis anlegen */
     gchar *config_dir = g_path_get_dirname(config_path);
     if (g_mkdir_with_parents(config_dir, 0700) != 0) {
-        g_warning("[Config] Failed to create config directory: %s\n", config_dir);
+        g_warning("[%s] [Config] Failed to create config directory: %s\n", time_stamp(), config_dir);
         g_free(config_dir);
         return;
     }
@@ -89,7 +90,7 @@ void init_config(void)
     /* Datei laden, wenn sie existiert */
     if (!g_key_file_load_from_file(key_file, config_path, G_KEY_FILE_KEEP_COMMENTS, &error)) 
     {
-        g_message("[Config] Config file does not exist, using defaults");
+        g_message("[%s] [Config] Config file does not exist, using defaults", time_stamp());
         g_clear_error(&error);
     } 
 
@@ -153,7 +154,7 @@ void save_config(void)
 
     GError *error = NULL;
     if (!g_key_file_save_to_file(key_file, config_path, &error)) {
-        g_warning("[Config] Failed to save config: %s\n", error->message);
+        g_warning("[%s] [Config] Failed to save config: %s\n", time_stamp(), error->message);
         g_clear_error(&error);
     }
 }
