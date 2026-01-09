@@ -28,7 +28,7 @@
     <keyword>standby</keyword>
     <keyword>screensaver</keyword>
   </keywords>
-  <!-- Screenshot (direkter PNG‑Link, z. B. über GitHub Pages) -->
+  <!-- Screenshot (direkter PNG-Link, z.B. über GitHub-Pages) -->
   <screenshots>
       <screenshot type="default">
         <caption>OLED Saver main window</caption>
@@ -37,7 +37,7 @@
   </screenshots> 
   <!-- Releases Information  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    -->
 <releases>
-  <release version="1.1.0" date="2026-01-06">
+  <release version="1.1.5" date="2026-01-06">
     <description>
       <p>This release includes improvements for a better user experience. </p>
       <ul>
@@ -45,7 +45,9 @@
       </ul>
     </description>
   </release>
-<!--  <release version="1.0.4" date="2025-11-29" /> -->
+  <!-- Previous Releases  -->
+  <release version="1.1.0" date="2026-01-07" />
+  <release version="1.0" date="2025-11-21" />
 </releases>
 
   <content_rating type="oars-1.1" />
