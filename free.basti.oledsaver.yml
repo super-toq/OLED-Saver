@@ -13,6 +13,7 @@ finish-args:
   - --device=dri                                          # GPU...
   - --talk-name=org.freedesktop.login1                    # systemd-Inhibit
   - --talk-name=org.freedesktop.ScreenSaver               # anscheinend nicht in Flatpak zulässig!
+  - --talk-name=org.gtk.vfs.*                             # erlaubt DBus mit GVfs zu reden
 #  - --filesystem=home                                     # (für Config nicht notwendig)
 #  - --talk-name=org.kde.Solid.PowerManagement.PolicyAgent # KDE Inhibit
 #  - --filesystem=home                                     # Zugriff auf USER-Daten
