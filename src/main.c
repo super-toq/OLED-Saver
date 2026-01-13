@@ -11,7 +11,7 @@
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
  *
  */
-#define APP_VERSION    "1.2.0"//_1
+#define APP_VERSION    "1.2.1"//_0
 #define APP_ID         "free.basti.oledsaver"
 #define APP_NAME       "OLED Saver"
 #define APP_DOMAINNAME "bastis-oledsaver"
@@ -27,6 +27,7 @@
 #include <string.h>         // für strstr() in Desktopumgebung;
 #include <math.h>           // Mathe.Bibliothek für Berechnung der Mauskoordinatenveränderung (sqrt);
 #include <dbus/dbus.h>      // für DBusConnection,DBusMessage,dbus_bus_get(),dbus_message_new_method_call;
+#include <unistd.h>
 #include <locale.h>         // für setlocale(LC_ALL, "")
 #include <glib/gi18n.h>     // für " _(); "
 
@@ -34,6 +35,10 @@
 #include "time_stamp.h"     // für Zeitstempel in Meldungen;
 #include "log_file.h"       // für externe Log-Datei (~/.var/app/<id>/state/), wenn aktiviert;
 
+/* libadwaite 1.8 */
+#ifndef ADW_VERSION_1_8
+#error "NOT building against libadwaita headers"
+#endif
 /* ----- Umgebung identifizieren ------------------------------------ */
 typedef enum {
     DESKTOP_UNKNOWN,
@@ -83,7 +88,6 @@ typedef struct {
 static uint32_t gnome_cookie = 0;  // GNOME-Inhibit uint32-Cookie, geliefert von org.freedesktop.ScreenSaver.Inhibit;
 static int system_fd = -1;         // systemd/KDE-Inhibit (fd = File Descriptor/Verbindung zu einem Systemdienst)
                                    // geliefert von org.freedesktop.login1.Manager.Inhibit;
-
 
 
 /* ----- Toast Mitteilungen ---------------------------------------- */
@@ -160,8 +164,7 @@ static void start_gnome_inhibit(void) { // Noch umbauen mit Rückmeldung bei Erf
 
 /* ----- Stop Gnome Inhibit ----------------------------------------- */
 static gboolean stop_gnome_inhibit(GError **error) 
-{
-(void)error; // Bewusst noch ungenutzt
+{ (void)error; // Bewusst noch ungenutzt
 
     if (!gnome_cookie) return TRUE; // True wenn kein Cookie vorhanden
 
@@ -200,7 +203,9 @@ static gboolean stop_gnome_inhibit(GError **error)
 }
 
 /* ----- systemd/KDE login1.Manager Inhibit ------------------------- */
-static void start_system_inhibit(void) { // Noch umbauen mit Rückmeldung bei Erfolg, wie STOP-Vorgang
+static void start_system_inhibit(void) 
+{ // Noch umbauen mit Rückmeldung bei Erfolg, wie STOP-Vorgang
+
     DBusError err;
     DBusConnection *conn;
     DBusMessage *msg, *reply;
@@ -266,8 +271,7 @@ static void start_system_inhibit(void) { // Noch umbauen mit Rückmeldung bei Er
 
 /* ----- Stop System Inhibit ---------------------------------------- */
 static gboolean stop_system_inhibit(GError **error) 
-{
-(void)error; // Bewusst noch ungenutzt
+{ (void)error; // Bewusst noch ungenutzt
 
     if (system_fd < 0) return FALSE; // kein fd - Rückgabe false
     close(system_fd);
@@ -277,7 +281,9 @@ static gboolean stop_system_inhibit(GError **error)
 }
 
 /* --- START-Wrapper --- ausgelöst in on_activate ------------------- */
-static void start_standby_prevention(void) {  // Noch umbauen mit Rückmeldung bei Erfolg, wie STOP !!
+static void start_standby_prevention(void)
+{  // Noch umbauen mit Rückmeldung bei Erfolg, wie STOP !!
+
     /* Entsprechende Funktion zur Umgebung starten: */
     DesktopEnvironment de = detect_desktop();
     if (de == DESKTOP_GNOME) start_gnome_inhibit();
@@ -288,8 +294,9 @@ static void start_standby_prevention(void) {  // Noch umbauen mit Rückmeldung b
 }
 /* --- STOP-Wrapper --- ausgelöst durch die Buttons ----------------- */
 static gboolean stop_standby_prevention(GError **error) 
-{   // stop_sp true/false Mechanik ist vorbereitet aber unfertig !!
-(void)error; // Bewusst noch ungenutzt
+{ (void)error; // Bewusst noch ungenutzt
+
+    // stop_sp true/false Mechanik ist vorbereitet aber unfertig !!
 
     gboolean stop_sp = TRUE; // TRUE wenn kein Fehler
 
@@ -432,9 +439,7 @@ static gboolean on_fullscreen_by_key(GtkEventControllerKey *controller,
                                                            guint keycode,  // Key-Scancode   (wird nicht benötigt)
                                                    GdkModifierType state,  // ob Zusatztaste (+ Alt, Shft ...)
                                                       gpointer user_data)  // = fullscreen_window
-{
-(void)controller; // erwartete genau diese Signatur
-(void)keycode; (void)state;
+{ (void)controller; (void)keycode; (void)state; // erwartete Signatur
 
     ScreensaverStruct *data = user_data;
     /* Prüfung auf vorhandene Strukt und Fenster-Gültigkeit */
@@ -476,7 +481,7 @@ static void show_about(GSimpleAction *action, GVariant *parameter, gpointer user
 
     AdwApplication *app = ADW_APPLICATION(user_data);
     /* About‑Dialog anlegen */
-    AdwAboutDialog *about = ADW_ABOUT_DIALOG(adw_about_dialog_new ());
+    AdwAboutDialog *about = ADW_ABOUT_DIALOG(adw_about_dialog_new());
     adw_about_dialog_set_application_name(about, APP_NAME);
     adw_about_dialog_set_version(about, APP_VERSION);
     adw_about_dialog_set_developer_name(about, "Built for Basti™");
@@ -507,7 +512,7 @@ static void show_about(GSimpleAction *action, GVariant *parameter, gpointer user
 
     /* Dialog innerhalb (modal) des Haupt-Fensters anzeigen */
     GtkWindow *parent = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(
-       gtk_application_get_active_window(GTK_APPLICATION(app)) )));
+                                   gtk_application_get_active_window(GTK_APPLICATION(app)) )));
     adw_dialog_present(ADW_DIALOG(about), GTK_WIDGET(parent));
 } // Ende About-Dialog
 
@@ -541,7 +546,7 @@ static void on_combo_changed(GObject *object, GParamSpec *pspec, gpointer user_d
 
 /* ----- Verzeichnis zur Log-Datei öffnen ----------------------------------------------- */
 static void open_log_folder(GtkButton *button, gpointer user_data)
-{  (void)button; (void)user_data; // erwartete Signatur
+{ (void)button; (void)user_data; // erwartete Signatur
 
     /* Fehlerroutine, Verzeichnis anlegen, falls vom Benutzer gelöscht wurde */
     log_folder_init();
@@ -753,6 +758,7 @@ static gboolean keep_window_on_top(gpointer user_data)
 /* ----- Callback Fullscreen-Button ------------------- */
 static void on_fullscreen_button_clicked(GtkButton *button, gpointer user_data)
 { (void)button; // erwartete Signatur
+
 // Für diesen Fullscreen gilt, alles GTK kein Adw!
 
     GtkApplication *app = GTK_APPLICATION(user_data);
@@ -927,7 +933,6 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     toast_manager.toast_overlay = ADW_TOAST_OVERLAY(adw_toast_overlay_new()); // ToastOverlay in Strukt.
     adw_toast_overlay_set_child(toast_manager.toast_overlay, GTK_WIDGET(nav_view));
     /* ----- ToastOverlay in das Fenster einfügen  ------------------- */
-    //adw_application_window_set_content(adw_win, GTK_WIDGET(toast_overlay)); // ToastOverl. in AdwWin
     adw_application_window_set_content(adw_win, GTK_WIDGET(toast_manager.toast_overlay)); // ToastOverl. in AdwWin / Strukt.
 
      //  Widget Hierarchie:                                               (ab version 1.1.5)
@@ -955,13 +960,32 @@ static void on_activate(AdwApplication *app, gpointer user_data)
         gtk_popover_menu_new_from_model(G_MENU_MODEL(menu)));
     gtk_menu_button_set_popover(menu_btn, GTK_WIDGET(menu_popover));
 
-    /* --- Aktion die den About-Dialog öffnet ------------------------ */
-    /* --- Action die die Einstellungen öffnet --- */
-    const GActionEntry action_entries[] = {
-    { "show-about", show_about, NULL, NULL, NULL, {0} },
-    { "show-settings", show_settings, NULL, NULL, NULL, {0} }
+    /* --- ACTION für Einstellungen u. About-Dialog ------------------ */
+    const GActionEntry about_entry[] = {
+    {
+        "show-about", // Bezeichnung    - einmalig er GActionMap
+        show_about,   // Activate       - Funktion wenn ausgelöst
+        NULL,         // Parameter_type - welcher Datentyp erwartet werden soll
+        NULL,         // State          - Zustand und Zustand-typ(b,s,i,d)
+        NULL,         // Change_state   - für Callback wenn sich state ändert
+        { 0 }         // Padding        - Erweiterungsfeld
+    }
+    }; 
+    const GActionEntry settings_entry[] = {
+    {
+        "show-settings",
+        show_settings,
+        NULL,
+        NULL,
+        NULL,
+        { 0 }
+    }
     };
-    g_action_map_add_action_entries(G_ACTION_MAP(app), action_entries, G_N_ELEMENTS(action_entries), nav_view);
+    /* Registrierung der im Array about_entry definierten Aktionen */ 
+    g_action_map_add_action_entries(G_ACTION_MAP(app), 
+                                          about_entry, G_N_ELEMENTS(   about_entry),      app);
+    g_action_map_add_action_entries(G_ACTION_MAP(app), 
+                                       settings_entry, G_N_ELEMENTS(settings_entry), nav_view);
 
     /* ---- Haupt-Box ------------------------------------------------ */
     GtkBox *main_box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 12));
@@ -970,8 +994,6 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     gtk_widget_set_margin_bottom(GTK_WIDGET(main_box),    24);   // unterer Rand unteh. der Buttons
     gtk_widget_set_margin_start (GTK_WIDGET(main_box),    12);   // links
     gtk_widget_set_margin_end   (GTK_WIDGET(main_box),    12);   // rechts
-//    gtk_widget_set_hexpand      (GTK_WIDGET(main_box), TRUE);
-//    gtk_widget_set_vexpand      (GTK_WIDGET(main_box), TRUE);
 
     /* ----- Label1 -------------------------------------------------- */
     GtkWidget *label1 = gtk_label_new(_("Blackscreen statt Burn-in! \n"));
@@ -998,6 +1020,7 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     /* --- G_object, Checkbox an "app" speichern, um diese im Callback abrufen zu können --- */
     g_object_set_data(G_OBJECT(app), "check", set1_check); // Freigeben anhand g_object_steal_data
         // Hinweis "set1_check" wird in on_fullscr.btn.clicked abgerufen.
+
     /* ----- Buttons-Box ---------------------------------------------- */
     GtkWidget *buttons_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 20);
     gtk_widget_set_halign(buttons_box, GTK_ALIGN_CENTER);
@@ -1008,7 +1031,7 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     //gtk_widget_set_halign(setfullscreen_button, GTK_ALIGN_CENTER);
     //gtk_widget_add_css_class(setfullscreen_button, "suggested-action");
     gtk_widget_add_css_class(setfullscreen_button, "custom-suggested-action-button1"); // CSS-Provider...
-    gtk_widget_add_css_class(setfullscreen_button, "opaque"); // durchsichtig machen...
+    gtk_widget_add_css_class(setfullscreen_button, "opaque"); // durchsichtig
 
     /* ----- Schaltfläche Beenden ------------------------------------ */
     GtkWidget *quit_button = gtk_button_new_with_label(_("  Beenden  "));
@@ -1047,7 +1070,7 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     adw_style_manager_set_color_scheme(style_manager, ADW_COLOR_SCHEME_FORCE_DARK);
 
     /* ----- Hauptfenster im Application-Objekt ablegen (!) --------- */
-    g_object_set_data(G_OBJECT(app), "main-window", adw_win);
+    g_object_set_data(G_OBJECT(app), "main-window", GTK_WINDOW(adw_win));
 
     /* ----- Hauptfenster desktop‑konform anzeigen ------------------ */
     gtk_window_present(GTK_WINDOW(adw_win));
@@ -1058,11 +1081,8 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     /* Settings: start_in_fs = true:   */
     if (g_cfg.start_in_fs) {
     g_print("[%s] [WARNING] Settings: start_in_fs=true - Start in fullscreen mode!\n", time_stamp());
-//    gtk_window_minimize(GTK_WINDOW(adw_win));                    // App Fenster minimieren
-//    window_handler(adw_win);
-    g_signal_emit_by_name(setfullscreen_button, "clicked");      // FullscreenButton klicken
+    g_signal_emit_by_name(setfullscreen_button, "clicked");      // FullscreenButton hier auslösen
     }
-
 }
 
 /* --------------------------------------------------------------------------- */
