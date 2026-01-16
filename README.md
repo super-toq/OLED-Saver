@@ -11,13 +11,13 @@ This app was created at the request of good buddy.
   
   
 ### Installation:  
-The quickest way to install OLED‑Saver is to download the application from the [Releases](https://github.com/super-toq/OLED-Saver/releases) page.  
+The quickest way to install OLED‑Saver is to download the application from the [Releases](https://github.com/supertoq/OLED-Saver/releases) page.  
 Installation proceeds as follows:  
 ```
 cd ~/Downloads  
 ```  
 ```
-flatpak install -y --user free.basti.oledsaver.flatpak  
+flatpak install -y --user io.github.supertoq.oledsaver.flatpak  
 ```  
   
 You can also build the application yourself from the transparent source code; here’s one way using Flatpak Builder.
@@ -56,24 +56,24 @@ flatpak install org.gnome.Sdk/x86_64/49
   
 #### Clone repository:  
 ```
-git clone https://github.com/super-toq/OLED-Saver.git 
+git clone https://github.com/supertoq/OLED-Saver.git 
 ```  
   
 ```
 cd OLED-Saver 
 ```  
 ```
-flatpak-builder --user --install --force-clean _build-dir free.basti.oledsaver.yml 
+flatpak-builder --user --install --force-clean _build-dir io.github.supertoq.oledsaver.yml 
 ```  
   
 ### Run the OLED-Saver:  
 ```
-flatpak run free.basti.oledsaver 
+flatpak run io.github.supertoq.oledsaver 
 ```  
   
 ### If you want to uninstall OLED-Saver:  
 ```
-flatpak uninstall -y free.basti.oledsaver 
+flatpak uninstall -y io.github.supertoq.oledsaver 
 ```  
   
 > [!Note]  
