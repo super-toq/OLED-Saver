@@ -1,4 +1,4 @@
-/* 2025 - 2026 super-toq
+/* 2025 - 2026 supertoq
  * LICENSE: BSD 2-Clause "Simplified"
  *
  * log_file.c
@@ -91,7 +91,7 @@ void log_file_init(const gchar *app_name)
     }
 
     /* Log-File, Pfad + Name  */
-    // Flatpak zwei Ebenen-Kapselung: ~/.var/app/free.basti.oledsaver/.local/state/free.basti.oledsaver/oledsaver.log
+    // Flatpak zwei Ebenen-Kapselung: ~/.var/app/free.basti.oledsaver/.local/state/<app-id>/debug.log
     gchar *log_path = g_build_filename(log_dir, "debug.log", NULL);
 
     /* Log-File öffnen und Logging anhängen (w=write a=add) */

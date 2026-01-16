@@ -1,4 +1,4 @@
-/* 2025 - 2026 super-toq
+/* 2025 - 2026 supertoq
  * LICENSE: BSD 2-Clause "Simplified"
  *
  * detect_desktop();
@@ -11,7 +11,7 @@
  * stby_prev.c
  * Version 2.1 2026-01-14
  */
-#define APP_ID         "free.basti.oledsaver"
+#define APP_ID         "io.github.supertoq.oledsaver"
 #define APP_NAME       "OLED Saver"
 
 #include <dbus/dbus.h>            // für DBusConnection,DBusMessage (dbus_* , sqrt )

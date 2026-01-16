@@ -1,9 +1,9 @@
-/* free.basti.oledsaver by super-toq 2025 - 2026 
+/* io.github.supertoq.oledsaver supertoq 2025 - 2026 
  * LICENSE: BSD 2-Clause "Simplified"
  *
  *
  *
- * gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o _build/bin/bastis-oledsaver src/main.c src/time_stamp.c src/stby_prev.c src/log_file.c src/config.c src/free.basti.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1) -lm -Wno-deprecated-declarations
+ * gcc $(pkg-config --cflags gtk4 libadwaita-1 dbus-1) -o _build/bin/bastis-oledsaver src/main.c src/time_stamp.c src/stby_prev.c src/log_file.c src/config.c src/io.github.supertoq.oledsaver.gresource.c $(pkg-config --libs gtk4 libadwaita-1 dbus-1) -lm -Wno-deprecated-declarations
  *
  *
  *
@@ -11,8 +11,8 @@
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
  *
  */
-#define APP_VERSION    "1.2.2"//_1
-#define APP_ID         "free.basti.oledsaver"
+#define APP_VERSION    "1.2.3"//_0
+#define APP_ID         "io.github.supertoq.oledsaver"
 #define APP_NAME       "OLED Saver"
 #define APP_DOMAINNAME "bastis-oledsaver"
 #define KEEP_WIN_TOP_TIME  120 // Timer in on_fullscreen_button_clicked()
@@ -290,13 +290,13 @@ static void show_about(GSimpleAction *action, GVariant *parameter, gpointer user
     adw_about_dialog_set_application_name(about, APP_NAME);
     adw_about_dialog_set_version(about, APP_VERSION);
     adw_about_dialog_set_developer_name(about, "Built for Basti™");
-    adw_about_dialog_set_website(about, "https://github.com/super-toq/OLED-Saver");
+    adw_about_dialog_set_website(about, "https://github.com/supertoq/OLED-Saver");
     //adw_about_dialog_set_comments(about, " ... ");
 
     /* Lizenz – BSD2 wird als „custom“ angegeben */
     adw_about_dialog_set_license_type(about, GTK_LICENSE_BSD);
     adw_about_dialog_set_license(about,
-        "Copyright © 2025 - 2026, super-toq\n\n"
+        "Copyright © 2025 - 2026, supertoq\n\n"
         "This program comes WITHOUT ANY WARRANTY.\n"
         "Follow the link to view the license details: "
         "<a href=\"https://opensource.org/license/BSD-2-Clause\"><b>BSD 2-Clause License</b></a>\n"
@@ -357,7 +357,7 @@ static void open_log_folder(GtkButton *button, gpointer user_data)
     log_folder_init();
 
     const gchar *home = config_get_home_path();                                  // aus config.c
-    gchar *homepath = g_build_filename(home, ".var/app/free.basti.oledsaver/.local/state/bastis-oledsaver", NULL);
+    gchar *homepath = g_build_filename(home, ".var/app/io.github.supertoq.oledsaver/.local/state/bastis-oledsaver", NULL);
     char *uri = g_filename_to_uri(homepath, NULL, NULL);
 
     if (uri) {
@@ -800,7 +800,7 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     gtk_widget_set_valign(label1, GTK_ALIGN_CENTER);
 
     /* ----- Icon ---------------------------------------------------- */
-    GtkWidget *icon = gtk_image_new_from_resource("/free/basti/oledsaver/icon2"); //alias in xml !
+    GtkWidget *icon = gtk_image_new_from_resource("/io/github/supertoq/oledsaver/icon2"); //alias in xml !
     gtk_widget_set_halign(icon, GTK_ALIGN_CENTER);                 // Icon horizontal zentrieren
     gtk_image_set_pixel_size(GTK_IMAGE(icon),  128);
     gtk_widget_set_margin_top(GTK_WIDGET(icon), 10);               // Abstand zum Label1
@@ -831,7 +831,7 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     //gtk_widget_add_css_class(setfullscreen_button, "suggested-action");
     gtk_widget_add_css_class(setfullscreen_button, "custom-suggested-action-button1"); // CSS-Provider...
     gtk_widget_add_css_class(setfullscreen_button, "opaque"); // durchsichtig
-    gtk_widget_set_size_request(setfullscreen_button, 140, 48);  // Breite 100, Höhe 50px
+    gtk_widget_set_size_request(setfullscreen_button, 140, 44);  // Breite 100, Höhe 50px
 
 
     /* ----- Schaltfläche Beenden ------------------------------------ */
@@ -841,7 +841,7 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     gtk_widget_add_css_class(quit_button, "custom-suggested-action-button2"); // CSS-Provider...
     gtk_widget_add_css_class(quit_button, "opaque"); // durchsichtig,
     //gtk_widget_add_css_class(quit_button, "destructive-action");
-    gtk_widget_set_size_request(quit_button, 140, 48);  // Breite 100, Höhe 50
+    gtk_widget_set_size_request(quit_button, 140, 44);  // Breite 100, Höhe 50
 
 
     /* --- Schaltflächen verbinden und "app" übergeben --------------- */
