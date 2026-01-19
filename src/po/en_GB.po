@@ -19,7 +19,7 @@ msgstr ""
 
 #: main.c:111
 msgid "Standby wird nun verhindert!"
-msgstr "Standby is prevented!"
+msgstr "Standby is now prevented!"
 
 #: main.c:418
 msgid "Neustart erforderlich!"
