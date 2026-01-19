@@ -11,12 +11,12 @@
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
  *
  */
-#define APP_VERSION    "1.2.3"//_0
+#define APP_VERSION    "1.2.4"//_1
 #define APP_ID         "io.github.supertoq.oledsaver"
 #define APP_NAME       "OLED Saver"
 #define APP_DOMAINNAME "bastis-oledsaver"
 #define KEEP_WIN_TOP_TIME  120 // Timer in on_fullscreen_button_clicked()
-/* Fenstergröße Breite, Höche (380, 400) */
+/* Fenster in Breite u. Höche (370, 410) */
 #define WIN_WIDTH      370
 #define WIN_HEIGHT     410
 
@@ -24,7 +24,7 @@
 #include <gtk/gtk.h>
 #include <adwaita.h>
 #include "icon-gresource.h" // binäre Icons;
-#include <string.h>            // für strstr() in Desktopumgebung;
+#include <string.h>         // für strstr() in Desktopumgebung;
 #include <math.h>           // Mathe.Bibliothek für Berechnung der Mauskoordinatenveränderung (sqrt);
 #include <unistd.h>         // POSIX-Header
 #include <locale.h>         // für setlocale(LC_ALL, "")
@@ -35,9 +35,9 @@
 #include "stby_prev.h"      // Standbyverhinderungslogik
 #include "log_file.h"       // für externe Log-Datei (~/.var/app/<id>/state/), wenn aktiviert;
 
-/* Voraussetzung libadwaite 1.8 */
+/* Voraussetzung zum kompilieren - libadwaite 1.8 */
 #ifndef ADW_VERSION_1_8
-#error "NOT building against libadwaita headers"
+#error "NOT building against libadwaita 1.8 headers"
 #endif
 /* ----- Globale Strukturen ------------------------------------ */
 typedef struct {                                  // Struktur für Combo_row
@@ -91,12 +91,23 @@ static void start_standby_prevention(void)
 
     /* Entsprechende Funktion zur Umgebung starten: */
     DesktopEnvironment de = detect_desktop();
-    if (de == DESKTOP_GNOME) start_gnome_inhibit();
-//    else
-    start_system_inhibit(); // KDE, XFCE, MATE
+    switch (de)
+    {   case DESKTOP_GNOME:
+            start_gnome_inhibit();
+            if (g_cfg.always_sys_ib) { // Config: system-ib in Gnome anwenden
+                start_system_inhibit();
+            }
+            break;
+        case DESKTOP_KDE:
+            start_system_inhibit();
+            break;
+        default:
+            start_system_inhibit();
+            break;
+     }
 
     /* Toast-Message ausgeben: */
-    // nicht anzeigen wenn g_cfg.start_in_fs=true
+        // nicht anzeigen wenn g_cfg.start_in_fs=true
     if (!g_cfg.start_in_fs) show_toast(_("Standby wird nun verhindert!"));
 }
 
@@ -107,15 +118,19 @@ static gboolean stop_standby_prevention(GError **error)
 
     gboolean stop_sp = TRUE; // TRUE wenn kein Fehler
 
-    if (!stop_gnome_inhibit(error))
+    if (!stop_gnome_inhibit(error)) {
         stop_sp = FALSE;
+        g_print("[STOP PREVENTION] Failed to stop GNOME inhibit: %s\n", error ? (*error)->message : "Unknown error");
+    }
 
-    if (!stop_system_inhibit(error))
+    if (!stop_system_inhibit(error)) {
         stop_sp = FALSE;
+        g_print("[STOP PREVENTION] Failed to stop system inhibit: %s\n", error ? (*error)->message : "Unknown error");
+    }
 
     if (stop_sp)
     {
-        g_print("[%s] [INFO] Preventing standby has been stopped\n", time_stamp());
+        g_print("[%s] [INFO] Preventing standby has been stopped (%s)\n", time_stamp(), stop_sp? "TRUE" : "FALSE");
         //
     }
 
@@ -368,28 +383,39 @@ static void open_log_folder(GtkButton *button, gpointer user_data)
 }
 
 /* ----- In Einstellungen: Schalter1-Toggle (AdwSwitchRow)--------------------------------- */
-static void on_settings_use_key_switch_row_toggled(GObject *object1, GParamSpec *pspec, gpointer user_data)
+static void on_settings_use_key_switch_row_toggled(GObject *object, GParamSpec *pspec, gpointer user_data)
 { (void)pspec; (void)user_data;
 
-    AdwSwitchRow *use_key_switch = ADW_SWITCH_ROW(object1);
+    AdwSwitchRow *use_key_switch = ADW_SWITCH_ROW(object);
     gboolean active = adw_switch_row_get_active(use_key_switch);
     g_cfg.use_key = active;
     save_config(); // speichern
-    g_print("[%s] [IFNO] Settings: use_key=%s\n", time_stamp(), g_cfg.use_key ? "true" : "false"); // zum testen !!
+    if (g_cfg.adv_debug_opt) g_print("[%s] [DEBUG] Settings: use_key=%s\n", time_stamp(), g_cfg.use_key ? "true" : "false"); // zum testen !!
 
     /* combo_row1 deaktivieren wenn use_key aktiviert wird; combo_row1 wird per user_data übergeben */
     GtkWidget *combo_row1 = GTK_WIDGET(user_data);
     gtk_widget_set_sensitive(combo_row1, g_cfg.use_key ? FALSE : TRUE);
 }
 /* ----- In Einstellungen: Schalter2-Toggle (AdwSwitchRow) ------------ */
-static void on_settings_start_in_fs_switch_row_toggled(GObject *object2, GParamSpec *pspec, gpointer user_data)
+static void on_settings_start_in_fs_switch_row_toggled(GObject *object, GParamSpec *pspec, gpointer user_data)
 { (void)pspec; (void)user_data;
 
-    AdwSwitchRow *start_in_fs_switch = ADW_SWITCH_ROW(object2); 
+    AdwSwitchRow *start_in_fs_switch = ADW_SWITCH_ROW(object); 
     gboolean active = adw_switch_row_get_active(start_in_fs_switch);
     g_cfg.start_in_fs = active;
     save_config(); // speichern
-    g_print("[%s] [INFO] Settings: start_in_fs=%s\n", time_stamp(), g_cfg.start_in_fs ? "true" : "false"); // zum testen !!
+    if (g_cfg.adv_debug_opt) g_print("[%s] [DEBUG] Settings: start_in_fs=%s\n", time_stamp(), g_cfg.start_in_fs ? "true" : "false"); // zum testen !!
+}
+/* ----- In Einstellungen: Schalter3-Toggle (AdwSwitchRow) ------------ */
+static void on_settings_always_sys_ib_switch_row_toggled(GObject *object, GParamSpec *pspec, gpointer user_data)
+{ (void)pspec; (void)user_data;
+
+    AdwSwitchRow *always_sys_ib = ADW_SWITCH_ROW(object); 
+    gboolean active = adw_switch_row_get_active(always_sys_ib);
+    g_cfg.always_sys_ib = active;
+    save_config(); // speichern
+    if (g_cfg.adv_debug_opt) g_print("[%s] [DEBUG] Settings: always_sys_ib=%s\n", time_stamp(), g_cfg.always_sys_ib ? "true" : "false"); // zum testen !!
+    show_toast(_("Neustart erforderlich!"));
 }
 /* ----- In Einstellungen: ActionRowGtkSwitch-Toggle ------------------ */ // ab version 1.1.5
 static void on_settings_log_enable_gtkswitch_toggled(GObject *object, GParamSpec *pspec, gpointer user_data)
@@ -399,7 +425,7 @@ static void on_settings_log_enable_gtkswitch_toggled(GObject *object, GParamSpec
     gboolean active = gtk_switch_get_active(log_enable_switch);
     g_cfg.log_enable = active;
     save_config(); // speichern
-    g_print("[%s] [INFO] Settings: log_enable=%s\n", time_stamp(), g_cfg.log_enable ? "true" : "false"); // zum testen !!
+    if (g_cfg.adv_debug_opt) g_print("[%s] [DEBUG] Settings: log_enable=%s\n", time_stamp(), g_cfg.log_enable ? "true" : "false"); // zum testen !!
     if (active) log_file_init(APP_ID); // Logging sofort beginnen (in config.c)
 }
 /* ----- Einstellungen-Page ------------------------------------------- */
@@ -427,10 +453,14 @@ static void show_settings(GSimpleAction *action, GVariant *parameter, gpointer u
     gtk_widget_set_margin_start(settings_box,  12);   // links
     gtk_widget_set_margin_end(settings_box,    12);   // rechts
 
-    /* ----- PreferencesGroup erstellen ----- */
-    AdwPreferencesGroup *settings_group = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
-    adw_preferences_group_set_title(settings_group, _("Präferenzoptionen"));
-    //adw_preferences_group_set_description(settings_group, _("Zusatzbeschreibung - Platzhalter"));
+    /* ----- PreferencesGroup1 erstellen ----- */
+    AdwPreferencesGroup *settings_group1 = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(settings_group1, _("Präferenzoptionen"));
+    //adw_preferences_group_set_description(settings_group1, _("Zusatzbeschreibung - Platzhalter"));
+
+    /* ----- PreferencesGroup2 erstellen ----- */
+    AdwPreferencesGroup *settings_group2 = ADW_PREFERENCES_GROUP(adw_preferences_group_new());
+    adw_preferences_group_set_title(settings_group2, _("Debugging"));
 
     /* ----- Combo Row erstellen ------------------------------------------------------------------- */
     GtkWidget *combo_row1 = adw_combo_row_new();
@@ -439,7 +469,7 @@ static void show_settings(GSimpleAction *action, GVariant *parameter, gpointer u
     adw_action_row_set_subtitle(ADW_ACTION_ROW(combo_row1),
      _("Mausbewegungsschwelle in Pixeln"));
 
-    /* ----- String_List der verfügbaren Optionen bauen ----- */
+    /* ----- String_List für verfügbaren Optionen bauen ----- */
     GtkStringList *string_list = gtk_string_list_new(NULL);
 
     for (guint i = 0; i < G_N_ELEMENTS(pixel_options); i++) {
@@ -453,9 +483,7 @@ static void show_settings(GSimpleAction *action, GVariant *parameter, gpointer u
     /* ----- ComboRow verbinden ----------------------------- */
     g_signal_connect(combo_row1, "notify::selected", G_CALLBACK(on_combo_changed), NULL);
     gtk_widget_set_sensitive(combo_row1, g_cfg.use_key ? FALSE : TRUE); // abhängig von cfg de/aktiviert
-    
-    /* ----- Combo Row zur PreferencesGroup hinzufügen ----- */
-    adw_preferences_group_add(settings_group, combo_row1);
+
     /* ------------------------------------------------------------------------------ Ende Combo Box */
 
     /* ----- AdwSwitchRow1 erzeugen --------- */
@@ -466,7 +494,7 @@ static void show_settings(GSimpleAction *action, GVariant *parameter, gpointer u
      _("Verwende die Leertaste anstelle der Maus, um den Blackscreen-Modus zu beenden"));
     /* Schalter-Aktivierung abhängig von gesetzten g_cfg.-Wert: */
     adw_switch_row_set_active(ADW_SWITCH_ROW(switch_row1), g_cfg.use_key);
-    gtk_widget_set_sensitive(GTK_WIDGET(switch_row1), TRUE);    //Aktiviert/Deaktiviert
+    gtk_widget_set_sensitive(GTK_WIDGET(switch_row1), TRUE);    //In- /Aktiv
 
     /* ----- AdwSwitchRow2 erzeugen --------- */
     AdwSwitchRow *switch_row2 = ADW_SWITCH_ROW(adw_switch_row_new());
@@ -476,26 +504,35 @@ static void show_settings(GSimpleAction *action, GVariant *parameter, gpointer u
      _("App direkt im Fullscreen-Modus starten"));
     /* Schalter-Aktivierung abhängig von gesetzten g_cfg.-Wert: */
     adw_switch_row_set_active(ADW_SWITCH_ROW(switch_row2), g_cfg.start_in_fs);
-    gtk_widget_set_sensitive(GTK_WIDGET(switch_row2), TRUE);    //Aktiviert/Deaktiviert
+    gtk_widget_set_sensitive(GTK_WIDGET(switch_row2), TRUE);    //In- /Aktiv
 
+    /* ----- AdwSwitchRow3 erzeugen --------- */
+    AdwSwitchRow *switch_row3 = ADW_SWITCH_ROW(adw_switch_row_new());
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(switch_row3), 
+                                                    _("In Gnome Desktop ..."));
+    adw_action_row_set_subtitle(ADW_ACTION_ROW(switch_row3),
+     _("Gnome-Inhibit und System-Inhibit verwenden"));
+    /* Schalter-Aktivierung abhängig von gesetzten g_cfg.-Wert: */
+    adw_switch_row_set_active(ADW_SWITCH_ROW(switch_row3), g_cfg.always_sys_ib);
+    gtk_widget_set_sensitive(GTK_WIDGET(switch_row3), TRUE); //In- /Aktiv
 
-    /* ----- ActionRow erstellen --(ab Version 1.1.5)----------------------------- Action ROW ------ */
+    /* ----- ActionRow für Debug-File erstellen --(ab Version 1.1.5)--------------- Action ROW ------ */
     AdwActionRow *action_row = ADW_ACTION_ROW(adw_action_row_new());
     adw_preferences_row_set_title(ADW_PREFERENCES_ROW(action_row), _("Debug-Datei erstellen"));
     adw_action_row_set_subtitle(action_row, _("Protokollausgaben in eine Datei schreiben"));
 
     /* ----- Button für Log-Folder erstellen ------------------- */
     GtkWidget *folder_button = gtk_button_new_from_icon_name("folder-open-symbolic");
-    gtk_button_set_has_frame(GTK_BUTTON(folder_button), FALSE);                  // Button ohne Rahmen
+    gtk_button_set_has_frame(GTK_BUTTON(folder_button), FALSE);             // Button ohne Rahmen
     gtk_widget_set_valign(folder_button, GTK_ALIGN_CENTER);
     g_signal_connect(folder_button, "clicked", G_CALLBACK(open_log_folder),NULL);
 
     /* ----- Switch für ActionRow erstellen ------ */
     GtkWidget *log_enable_switch = gtk_switch_new();
-    gtk_switch_set_active(GTK_SWITCH(log_enable_switch), g_cfg.log_enable);      // Schalterstellung abhängig von config
+    gtk_switch_set_active(GTK_SWITCH(log_enable_switch), g_cfg.log_enable); // Schalterstellung abhängig von config
     gtk_widget_set_valign(log_enable_switch, GTK_ALIGN_CENTER);
 
-    /* ----- Objekte der ActionRow einfügen ------ */
+    /* ----- Objekte der ActionRow zufügen ------ */
     adw_action_row_add_prefix(action_row, folder_button);
     adw_action_row_add_suffix(action_row, log_enable_switch);
     adw_action_row_set_activatable_widget(action_row, log_enable_switch); /*<----- Action ROW Ende -- */
@@ -504,17 +541,25 @@ static void show_settings(GSimpleAction *action, GVariant *parameter, gpointer u
     g_signal_connect(switch_row1,       "notify::active",               // use_key
                                   G_CALLBACK(on_settings_use_key_switch_row_toggled), combo_row1); // combo_row1 ebenfalls übergeben, zum de/aktivieren
     g_signal_connect(switch_row2, "notify::active",                     // start_in_fs
-                                  G_CALLBACK(on_settings_start_in_fs_switch_row_toggled), NULL);
+                                  G_CALLBACK(on_settings_start_in_fs_switch_row_toggled),   NULL);
+    g_signal_connect(switch_row3, "notify::active",                     // always_sys_ib
+                                  G_CALLBACK(on_settings_always_sys_ib_switch_row_toggled), NULL);
     g_signal_connect(log_enable_switch, "notify::active",               // log_enable 
-                                  G_CALLBACK(on_settings_log_enable_gtkswitch_toggled),   NULL);
+                                  G_CALLBACK(on_settings_log_enable_gtkswitch_toggled),     NULL);
 
     /* ----- Rows zur PreferencesGruppe hinzufügen ----- */
-    adw_preferences_group_add(settings_group, GTK_WIDGET(switch_row1)); // SwitchRow  - use_key
-    adw_preferences_group_add(settings_group, GTK_WIDGET(switch_row2)); // SwitchRow  - start_in_fs
-    adw_preferences_group_add(settings_group, GTK_WIDGET(action_row));  // AchtionRow - log_enable
+    adw_preferences_group_add(settings_group1, GTK_WIDGET(combo_row1));
+    adw_preferences_group_add(settings_group1, GTK_WIDGET(switch_row1)); // SwitchRow  - use_key
+    adw_preferences_group_add(settings_group1, GTK_WIDGET(switch_row2)); // SwitchRow  - start_in_fs
+    // Gruppe-Debug:
+    adw_preferences_group_add(settings_group2, GTK_WIDGET(switch_row3)); // SwitchRow  - always_sys_ib
+    adw_preferences_group_add(settings_group2, GTK_WIDGET(action_row));  // AchtionRow - log_enable
 
-    /* ----- Pref.Gruppe in die Page einbauen ----- */
-    gtk_box_append(GTK_BOX(settings_box), GTK_WIDGET(settings_group));
+    if (!g_cfg.adv_debug_opt) gtk_widget_hide(GTK_WIDGET(switch_row3));
+
+    /* ----- Pref.Gruppen in die Page einbauen ----- */
+    gtk_box_append(GTK_BOX(settings_box), GTK_WIDGET(settings_group1));
+    gtk_box_append(GTK_BOX(settings_box), GTK_WIDGET(settings_group2));
 
     /* ----- ScrolledWindow erstellen und in die settingsBOX einfügen ----- */
     GtkWidget *scrolled_window = gtk_scrolled_window_new();
@@ -599,9 +644,9 @@ static void on_fullscreen_button_clicked(GtkButton *button, gpointer user_data)
     /* 1.3 Vollbild-Fenster */
     GtkWidget *fullscreen_window = gtk_application_window_new(app);
 
-    /*  Transient + Modal zwingen Child_window zu modalen Dialog */
+    /*  Transient + Modal, zwingen Child_window zu modalen Dialog */
     gtk_window_set_transient_for(GTK_WINDOW(fullscreen_window), GTK_WINDOW(main_win));
-    /* App blockieren solange Fenster besteht */
+    /* App blockieren, solange Fenster besteht */
     gtk_window_set_modal(GTK_WINDOW(fullscreen_window), TRUE);
 
     /* Fenstereigenschaften */
@@ -661,16 +706,20 @@ static void on_quitbutton_clicked(GtkButton *button, gpointer user_data)
 {  (void)button; // erwartete Signatur
 
     GError *error = NULL;
+    gboolean stopping;
+
     g_print("[%s] [INFO] Applicaton will now shut down\n", time_stamp());
-    if (stop_standby_prevention(&error)) {
+    stopping = stop_standby_prevention(&error);
+    if (stopping) {
         /* Rückmeldung aus stop_standby_prevention (stop_sp) */
-     // Hier Ausbau für Rückmeldung (TRUE) !!
+
+     // Ausbau für TRUE möglich!
 
     } else {
         g_warning ("Failed to stop standby prevention: %s\n", error->message);
         g_error_free(error); // nur bei FALSE ist Fehler
 
-     // Hier Ausbau für Rückmeldung (FALSE) !!
+     // Ausbau für FALSE möglich!
 
     }
     /* zu schließendes Fenster holen */
@@ -904,9 +953,9 @@ int main(int argc, char **argv)
     init_environment();                                     // Config.c: Environment ermitteln
     init_config();                                          // Config.c: Config File laden/erstellen
 
-    /* 2.1 Config-Werte zum testen auslesen: !! */
-    g_print("Settings:\n mouse_move_limit=%d,\n use_key=%d\n start_in_fs=%d\n log_enable=%d\n",
-                         g_cfg.mouse_move_limit, g_cfg.use_key, g_cfg.start_in_fs, g_cfg.log_enable);
+    /* 2.1 Config-Werte zum testen auslesen  */
+    if (g_cfg.adv_debug_opt) g_print("Loaded settings:\n mouse_move_limit=%d\n use_key=%d\n start_in_fs=%d\n always_sys_ib=%d\n log_enable=%d\n",
+                         g_cfg.mouse_move_limit, g_cfg.use_key, g_cfg.start_in_fs, g_cfg.always_sys_ib, g_cfg.log_enable);
 
     /* 3. Externes Logging starten und APP_ID übermitteln */
     log_folder_init();                                      // Logfolder immer erstellen
@@ -918,7 +967,7 @@ int main(int argc, char **argv)
     setlocale(LC_ALL, "");                                  // ruft die aktuelle Locale des Prozesses ab
 //    setlocale(LC_ALL, "en_US.UTF-8");                     // explizit, zum testen!!
     textdomain             (APP_DOMAINNAME);                // textdomain festlegen
-//    g_print("[%s] [INFO] flatpak_id %s\n",time_stamp(), flatpak_id);
+    if (g_cfg.adv_debug_opt) g_print("[%s] [DEBUG] flatpak ID=%s\n",time_stamp(), flatpak_id);
     bind_textdomain_codeset(APP_DOMAINNAME, "UTF-8"); 
     if (flatpak_id != NULL && flatpak_id[0] != '\0')
     {
@@ -927,14 +976,14 @@ int main(int argc, char **argv)
         locale_path = "/usr/share/locale";
     }
     bindtextdomain         (APP_DOMAINNAME, locale_path);
-    g_print("[%s] [INFO] Localization files in: %s \n", time_stamp(), locale_path);
+    if (g_cfg.adv_debug_opt) g_print("[%s] [DEBUG] Localization files in: %s \n", time_stamp(), locale_path);
 
     /* 5. Resource-Bundle registrieren */
     g_resources_register(resources_get_resource());
 
-    /* 7. Verbindung zu UI */
-    g_signal_connect(app, "activate",     G_CALLBACK(on_activate),  NULL);
+    /* 7. UI-Verbindung */
+    g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
 
-    /* 8. Anwendung starten und Ereignis warten */
+    /* 8. Anwendung starten und auf Ereignis warten */
     return g_application_run(G_APPLICATION(app), argc, argv);
 }

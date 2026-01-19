@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: io.github.supertoq.oledsaver\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-12 13:05+0100\n"
+"POT-Creation-Date: 2026-01-19 10:41+0100\n"
 "PO-Revision-Date: 2025-12-11 13:44+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,72 +17,88 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: main.c:287
+#: main.c:111
 msgid "Standby wird nun verhindert!"
 msgstr "Standby is prevented!"
 
-#: main.c:606 main.c:718
+#: main.c:418
+msgid "Neustart erforderlich!"
+msgstr "App restart required"
+
+#: main.c:442 main.c:573
 msgid "Einstellungen"
 msgstr "Settings"
 
-#: main.c:622
+#: main.c:458
 msgid "Präferenzoptionen"
 msgstr "Preference Options"
 
-#: main.c:628
+#: main.c:463
+msgid "Debugging"
+msgstr "Debugging"
+
+#: main.c:468
 msgid "Minimalbewegungen zulassen"
 msgstr "Allow minimal movements"
 
-#: main.c:630
+#: main.c:470
 msgid "Mausbewegungsschwelle in Pixeln"
 msgstr "Mouse movement threshold in pixels"
 
-#: main.c:654
+#: main.c:492
 msgid "Leertaste verwenden"
 msgstr "Use Spacebar"
 
-#: main.c:656
+#: main.c:494
 msgid ""
 "Verwende die Leertaste anstelle der Maus, um den Blackscreen-Modus zu beenden"
 msgstr "Use the Spacebar instead of the mouse to exit Black Screen mode"
 
-#: main.c:664
+#: main.c:502
 msgid "Im Fullscreen-Modus starten"
 msgstr "Start in fullscreen mode"
 
-#: main.c:666
+#: main.c:504
 msgid "App direkt im Fullscreen-Modus starten"
 msgstr "Start app directly in fullscreen mode"
 
-#: main.c:674
+#: main.c:512
+msgid "In Gnome Desktop ..."
+msgstr "In Gnome Desktop ..."
+
+#: main.c:514
+msgid "Gnome-Inhibit und System-Inhibit verwenden"
+msgstr "Use Gnome Inhibit and System Inhibit"
+
+#: main.c:521
 msgid "Debug-Datei erstellen"
 msgstr "Create debug file"
 
-#: main.c:675
+#: main.c:522
 msgid "Protokollausgaben in eine Datei schreiben"
 msgstr "Write log output to file"
 
-#: main.c:952
+#: main.c:811
 msgid "Einstellungen         "
 msgstr "Settings            "
 
-#: main.c:953
+#: main.c:812
 msgid "Infos zu OLED Saver   "
 msgstr "About OLED Saver   "
 
-#: main.c:977
+#: main.c:847
 msgid "Blackscreen statt Burn-in! \n"
 msgstr "Black Screen instead of burn-in!\n"
 
-#: main.c:988
+#: main.c:858
 msgid "Alle 2min auffrischen"
 msgstr "Refresh every 2 minutes"
 
-#: main.c:1007
+#: main.c:878
 msgid "Blackscreen"
 msgstr "Black Screen"
 
-#: main.c:1014
+#: main.c:887
 msgid "  Beenden  "
 msgstr "   Quit   "
 

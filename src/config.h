@@ -4,9 +4,13 @@
  * config.h
  *
  * Globalen Struktur FindConfig g_cfg und 
- * Deklaration init_environment(), init_config(), save_config(), config_cleanup().
+ * Deklarationen:
+ * - init_environment()
+ * - init_config()
+ * - save_config()
+ * - config_cleanup()
  *
- * Version 2026-01-10
+ * Version 2026-01-19
  */
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -15,12 +19,14 @@
 
 /* ----- Globale Struktur um Konfigurations-Parameter zu kapseln ------------ */
 typedef struct {
-    int mouse_move_limit;                  // Zahl zwischen 50 - 200
-    gboolean     use_key;                  // Fullscreen per Leertaste beenden
-    gboolean start_in_fs;                  // direkt im Fullscreen-Modus starten
-    gboolean  log_enable;                  // logging in Datei
+    int      mouse_move_limit;             // Zahl zwischen 50 - 200
+    gboolean          use_key;             // Fullscreen per Leertaste beenden
+    gboolean      start_in_fs;             // direkt im Fullscreen-Modus starten
+    gboolean    always_sys_ib;             // systemd-inhibit bei Gnome anwenden
+    gboolean       log_enable;             // logging in Datei
+    gboolean    adv_debug_opt;             // erweiterte Debug Optionen
 } FindConfig;
-extern FindConfig  g_cfg;                  // Globale Instanz
+extern FindConfig       g_cfg;             // Globale Instanz
 
 /* ----- Funktionen, die von außen aufgerufen werden ----------------------- */
 void init_environment(void);               // Pfade ermitteln
@@ -29,7 +35,7 @@ void save_config     (void);               // g_cfg Datei schreiben
 void config_cleanup  (void);               // Aufräumen
 
 const gchar *config_get_config_path(void); // Pfad zur Config-Verzeichnis abfragen
-const gchar *config_get_home_path(void);   // Pfad zur Config-Verzeichnis abfragen
-const gchar *config_get_flatpak_id(void);
+const gchar *config_get_home_path  (void); // Pfad zur Config-Verzeichnis abfragen
+const gchar *config_get_flatpak_id (void); // abfragen ob es ein Flatpak ID gibt
 
 #endif //CONFIG_H

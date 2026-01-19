@@ -9,7 +9,8 @@
  * 
  * Standby-Prevention-Logik
  * stby_prev.c
- * Version 2.1 2026-01-14
+ *
+ * Version 2.4 2026-01-19
  */
 #define APP_ID         "io.github.supertoq.oledsaver"
 #define APP_NAME       "OLED Saver"
@@ -20,7 +21,7 @@
 #include <string.h>               // für strstr() in Desktopumgebung;
 
 #include "stby_prev.h"            // die öffentliche Schnittstelle hierfür
-//#include "config.h"               // für g_cfg. (für spätere Implementierungen
+//#include "config.h"             // für g_cfg. (für spätere Implementierungen
 #include "time_stamp.h"           // Zeitstempel
 #include "log_file.h"             // g_print logging
 
@@ -45,7 +46,8 @@ DesktopEnvironment detect_desktop(void)
     return DESKTOP_UNKNOWN;
 }
 
-/* ----- GNOME ScreenSaver Inhibit ---------------------------------- */
+
+/* ----- GNOME Inhibit und ScreenLock-Verhinderung ------------------ */
 void start_gnome_inhibit(void)
 {
     DBusError err = DBUS_ERROR_INIT;
@@ -71,6 +73,7 @@ void start_gnome_inhibit(void)
         return;
     }
 
+    /* Nachrichten-Iterator */
     const char *app    = APP_NAME;
     const char *reason = "Prevent Standby";
     DBusMessageIter args;
@@ -102,18 +105,18 @@ void start_gnome_inhibit(void)
     dbus_message_unref(reply);
 }
 
-
 /* ----- Stop Gnome Inhibit ----------------------------------------- */
 gboolean stop_gnome_inhibit(GError **error)
-{ (void)error; // bewusst inaktiv
+{
 
-    if (!gnome_cookie) return TRUE;   /* nichts zu beenden */
+    if (!gnome_cookie) return TRUE;   // nichts zu beenden
 
     DBusError err = DBUS_ERROR_INIT;
     DBusConnection *conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
     if (!conn || dbus_error_is_set(&err)) 
     {
         g_warning("[GNOME-INHIBIT] DBus error: %s\n", err.message);
+        g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED, "Error reason: %s", err.message); // an Wrapper weiterreichen
         dbus_error_free(&err);
         return FALSE;
     }
@@ -154,6 +157,7 @@ void start_system_inhibit(void)
         return;
     }
 
+    /* DBus-Auffruf vorbereiten */
     DBusMessage *msg = dbus_message_new_method_call(
         "org.freedesktop.login1",
         "/org/freedesktop/login1",
@@ -170,6 +174,7 @@ void start_system_inhibit(void)
     const char *why  = "Prevent Standby";
     const char *mode = "block";
 
+    /* Nachrichten-Iterator */
     DBusMessageIter args;
     dbus_message_iter_init_append(msg, &args);
     dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &what);
@@ -177,7 +182,7 @@ void start_system_inhibit(void)
     dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &why);
     dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &mode);
 
-    /* Methode senden und Antwort empfangen */
+    /* Nachricht senden */
     DBusMessage *reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, &err);
     if (!reply) 
     {
@@ -187,6 +192,7 @@ void start_system_inhibit(void)
         return;
     }
 
+    /* Antwort auslesen (File Descriptor) */
     DBusMessageIter iter;
     if (dbus_message_iter_init(reply, &iter) &&
         dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_UNIX_FD) 
@@ -201,17 +207,22 @@ void start_system_inhibit(void)
     dbus_message_unref(reply);
 }
 
-/* ----- Stop System Inhibit ---------------------------------------- */
-gboolean stop_system_inhibit(GError **error)
+/* ----- Stop System-Inhibit ---------------------------------------- */
+gboolean stop_system_inhibit(GError **error) 
 {
-    (void)error;   /* Parameter bleibt aus Kompatibilitäts‑Gründen */
+    if (system_fd < 0) { // es gibt nichts zum beenden
+        g_print("[%s] [SYSTEM-INHIBIT] Skipped! No valid file descriptor available to stop. (fd=%d)\n", time_stamp(), system_fd);
+    } else {
+        // Schließe den File Descriptor, wenn noch valide
+        if (close(system_fd) < 0) { // Fehlerbehandlung (das "< 0" bezieht sich hier auf close für Fehler!)
+            if (error) {
+                g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED, "Error reason: %s", strerror(errno)); // an Wrapper weiterreichen
+            }
+            return FALSE;
+        }
+        g_print("[%s] [SYSTEM-INHIBIT] Deactivated (fd=%d)\n", time_stamp(), system_fd);
+    }
 
-    if (system_fd < 0) return FALSE;   /* kein gültiger FD */
-
-    close(system_fd);
-    g_print("[%s] [SYSTEM-INHIBIT] Deactivated (fd=%d)\n",
-            time_stamp(), system_fd);
-    system_fd = -1;
+    system_fd = -1; // Setze den FD zurück
     return TRUE;
 }
-
