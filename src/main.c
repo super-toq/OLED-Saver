@@ -11,7 +11,7 @@
  * The Use of this code and execution of the applications is at your own risk, I accept no liability!
  *
  */
-#define APP_VERSION    "1.2.4"//_1
+#define APP_VERSION    "1.2.4"//_5
 #define APP_ID         "io.github.supertoq.oledsaver"
 #define APP_NAME       "OLED Saver"
 #define APP_DOMAINNAME "bastis-oledsaver"
@@ -106,8 +106,7 @@ static void start_standby_prevention(void)
             break;
      }
 
-    /* Toast-Message ausgeben: */
-        // nicht anzeigen wenn g_cfg.start_in_fs=true
+    /* Toast-Message ausgeben: (nicht anzeigen wenn g_cfg.start_in_fs=true) - */
     if (!g_cfg.start_in_fs) show_toast(_("Standby wird nun verhindert!"));
 }
 
@@ -540,9 +539,9 @@ static void show_settings(GSimpleAction *action, GVariant *parameter, gpointer u
     /* ----- Schalter verbinden --------------------------------- */
     g_signal_connect(switch_row1,       "notify::active",               // use_key
                                   G_CALLBACK(on_settings_use_key_switch_row_toggled), combo_row1); // combo_row1 ebenfalls übergeben, zum de/aktivieren
-    g_signal_connect(switch_row2, "notify::active",                     // start_in_fs
+    g_signal_connect(switch_row2,       "notify::active",               // start_in_fs
                                   G_CALLBACK(on_settings_start_in_fs_switch_row_toggled),   NULL);
-    g_signal_connect(switch_row3, "notify::active",                     // always_sys_ib
+    g_signal_connect(switch_row3,       "notify::active",               // always_sys_ib
                                   G_CALLBACK(on_settings_always_sys_ib_switch_row_toggled), NULL);
     g_signal_connect(log_enable_switch, "notify::active",               // log_enable 
                                   G_CALLBACK(on_settings_log_enable_gtkswitch_toggled),     NULL);
@@ -730,7 +729,7 @@ static void on_quitbutton_clicked(GtkButton *button, gpointer user_data)
 }
 
 /* ------------------------------------------------------------------ */
-/*       Aktivierungshandler                                          */
+/* Aktivierungshandler                                                */
 /* ------------------------------------------------------------------ */
 static void on_activate(AdwApplication *app, gpointer user_data) 
 { (void)user_data;
@@ -753,7 +752,6 @@ static void on_activate(AdwApplication *app, gpointer user_data)
                                                     "  color: #c0bfbc;"
                                                                     "}"
                                                                      );
-
     gtk_style_context_add_provider_for_display(gdk_display_get_default(),
     GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
     g_object_unref(provider);
@@ -879,19 +877,17 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     //gtk_widget_set_halign(setfullscreen_button, GTK_ALIGN_CENTER);
     //gtk_widget_add_css_class(setfullscreen_button, "suggested-action");
     gtk_widget_add_css_class(setfullscreen_button, "custom-suggested-action-button1"); // CSS-Provider...
-    gtk_widget_add_css_class(setfullscreen_button, "opaque"); // durchsichtig
+    gtk_widget_add_css_class(setfullscreen_button, "opaque"); // undurchsichtig
     gtk_widget_set_size_request(setfullscreen_button, 140, 44);  // Breite 100, Höhe 50px
-
 
     /* ----- Schaltfläche Beenden ------------------------------------ */
     GtkWidget *quit_button = gtk_button_new_with_label(_("  Beenden  "));
     gtk_widget_set_halign(quit_button, GTK_ALIGN_CENTER);
     //gtk_widget_add_css_class(quit_button, "raised");
     gtk_widget_add_css_class(quit_button, "custom-suggested-action-button2"); // CSS-Provider...
-    gtk_widget_add_css_class(quit_button, "opaque"); // durchsichtig,
+    gtk_widget_add_css_class(quit_button, "opaque"); // undurchsichtig,
     //gtk_widget_add_css_class(quit_button, "destructive-action");
     gtk_widget_set_size_request(quit_button, 140, 44);  // Breite 100, Höhe 50
-
 
     /* --- Schaltflächen verbinden und "app" übergeben --------------- */
     g_signal_connect(setfullscreen_button, "clicked", G_CALLBACK(on_fullscreen_button_clicked), app);
@@ -924,7 +920,7 @@ static void on_activate(AdwApplication *app, gpointer user_data)
     /* ----- Hauptfenster im Application-Objekt ablegen (!) ------- */
     g_object_set_data(G_OBJECT(app), "main-window", GTK_WINDOW(adw_win));
 
-    /* ----- Hauptfenster desktop‑konform anzeigen ---------------- */
+    /* ----- Hauptfenster desktop-konform anzeigen ---------------- */
     gtk_window_present(GTK_WINDOW(adw_win));
 
     /* +++++ Funktion zum umgehen der Standbyzeit starten +++++++++ */
