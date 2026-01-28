@@ -1,6 +1,7 @@
 /* 2025 - 2026 supertoq
  * LICENSE: BSD 2-Clause "Simplified"
  *
+ * config.c for oledsaver
  *
  * Implementierung:
  * • init_environment() - ermittelt app_dir und config_path
@@ -10,13 +11,14 @@
  *
  *  g_cfg.mouse_move_limit
  *  g_cfg.use_key
+ *  g_cfg.quit_key
  *  g_cfg.start_in_fs
  *  g_cfg.log_enable
  *  config_get_config_path()
  *  home_path - verwenden anhand: " const gchar *home = config_get_home_path(); " = readonly, nicht g_free
  *  flatpak_id - per config_get_flatpak_id()
  *
- * Version 2026-01-19  created in Allstedt with joy 
+ * Version 2026-01-26  created in Allstedt with joy 
  */
 
 #include "time_stamp.h"
@@ -33,6 +35,7 @@ static const gchar *flatpak_id  = NULL;    // Flatpak ID readonly / GLib-owned
 FindConfig g_cfg = {            // Standard-Werte, falls alles fehlschlägt
     .mouse_move_limit = 50,
     .use_key          = FALSE,
+    .quit_key         = FALSE,
     .start_in_fs      = FALSE,
     .always_sys_ib    = TRUE,
     .log_enable       = FALSE,
@@ -102,6 +105,7 @@ void init_config(void)
     if (!g_key_file_has_group(key_file, "General")) {
         g_key_file_set_integer(key_file, "General", "mouse_move_limit",   50);
         g_key_file_set_boolean(key_file, "General", "use_key",         FALSE);
+        g_key_file_set_boolean(key_file, "General", "quit_key",        FALSE);
         g_key_file_set_boolean(key_file, "General", "start_in_fs",     FALSE);
         g_key_file_set_boolean(key_file, "General", "always_sys_ib",    TRUE);
         g_key_file_set_boolean(key_file, "Debugging", "log_enable",    FALSE);
@@ -116,15 +120,18 @@ void init_config(void)
     if (!g_key_file_has_key(key_file, "General", "use_key", NULL))
         g_key_file_set_boolean(key_file, "General", "use_key", FALSE);
     // key3
+    if (!g_key_file_has_key(key_file, "General", "quit_key", NULL))
+        g_key_file_set_boolean(key_file, "General", "quit_key", FALSE);
+    // key4
     if (!g_key_file_has_key(key_file, "General", "start_in_fs", NULL))
         g_key_file_set_boolean(key_file, "General", "start_in_fs", FALSE);
-    // key4
+    // key5
     if (!g_key_file_has_key(key_file, "General", "always_sys_ib", NULL))
         g_key_file_set_boolean(key_file, "General", "always_sys_ib", TRUE);
-    // key5
+    // key6
     if (!g_key_file_has_key(key_file, "Debugging", "log_enable", NULL))
         g_key_file_set_boolean(key_file, "Debugging", "log_enable", FALSE);
-    // Key6 (test)
+    // Key7 (test)
     if (!g_key_file_has_key(key_file, "Debugging", "adv_debug_opt", NULL))
         g_key_file_set_boolean(key_file, "Debugging", "adv_debug_opt", FALSE);
 
@@ -145,26 +152,33 @@ void init_config(void)
     }
     // key3
     error = NULL;
+    g_cfg.quit_key = g_key_file_get_boolean(key_file, "General", "quit_key", &error);
+    if (error) {
+        g_cfg.quit_key = FALSE;
+        g_clear_error(&error);
+    }
+    // key4
+    error = NULL;
     g_cfg.start_in_fs = g_key_file_get_boolean(key_file, "General", "start_in_fs", &error);
     if (error) {
         g_cfg.start_in_fs = FALSE;
         g_clear_error(&error);
     }
-    // key4
+    // key5
     error = NULL;
     g_cfg.always_sys_ib = g_key_file_get_boolean(key_file, "General", "always_sys_ib", &error);
     if (error) {
         g_cfg.always_sys_ib = TRUE;
         g_clear_error(&error);
     }
-    // key5
+    // key6
     error = NULL;
     g_cfg.log_enable = g_key_file_get_boolean(key_file, "Debugging", "log_enable", &error);
     if (error) {
         g_cfg.log_enable = FALSE;
         g_clear_error(&error);
     }
-    // key6 (test)
+    // key7 (test)
     error = NULL;
     g_cfg.adv_debug_opt = g_key_file_get_boolean(key_file, "Debugging", "adv_debug_opt", &error);
     if (error) {
@@ -187,12 +201,14 @@ void save_config(void)
     // key2
     g_key_file_set_boolean(key_file, "General",   "use_key",          g_cfg.use_key);
     // key3
-    g_key_file_set_boolean(key_file, "General",   "start_in_fs",      g_cfg.start_in_fs);
+    g_key_file_set_boolean(key_file, "General",   "quit_key",         g_cfg.quit_key);
     // key4
-    g_key_file_set_boolean(key_file, "General",   "always_sys_ib",    g_cfg.always_sys_ib);
+    g_key_file_set_boolean(key_file, "General",   "start_in_fs",      g_cfg.start_in_fs);
     // key5
+    g_key_file_set_boolean(key_file, "General",   "always_sys_ib",    g_cfg.always_sys_ib);
+    // key6
     g_key_file_set_boolean(key_file, "Debugging", "log_enable",       g_cfg.log_enable);
-    // key6 (test)
+    // key7 (test)
     g_key_file_set_boolean(key_file, "Debugging", "adv_debug_opt",    g_cfg.adv_debug_opt);
 
     GError *error = NULL;

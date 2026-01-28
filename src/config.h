@@ -21,6 +21,7 @@
 typedef struct {
     int      mouse_move_limit;             // Zahl zwischen 50 - 200
     gboolean          use_key;             // Fullscreen per Leertaste beenden
+    gboolean         quit_key;             // Leertaste schließt auch die Anwendung
     gboolean      start_in_fs;             // direkt im Fullscreen-Modus starten
     gboolean    always_sys_ib;             // systemd-inhibit bei Gnome anwenden
     gboolean       log_enable;             // logging in Datei
